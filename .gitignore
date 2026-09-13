@@ -1,0 +1,12 @@
+node_modules/
+dist/
+instance/*.db
+instance/*.sqlite
+instance/*.flag
+uploads/*
+!uploads/.gitkeep
+.env
+.env.local
+*.pyc
+__pycache__/
+.pytest_cache/

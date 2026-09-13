@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LatticeLink | Quantum-Secure Communication Network</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Shared Component Styling & Hierarchy Logic -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#6434ec",
+                    "primary-fixed-dim": "#ccbeff",
+                    "on-primary-container": "#e8e0ff",
+                    "surface-container-low": "#f2f3f7",
+                    "secondary-fixed": "#dae2ff",
+                    "outline": "#797487",
+                    "primary-container": "#6c3ef4",
+                    "on-secondary-fixed": "#001847",
+                    "on-secondary-container": "#002564",
+                    "on-background": "#191c1f",
+                    "secondary-container": "#5b8cff",
+                    "surface-container-high": "#e7e8ec",
+                    "tertiary-fixed": "#a1efff",
+                    "on-surface-variant": "#484456",
+                    "surface": "#f8f9fd",
+                    "secondary-fixed-dim": "#b2c5ff",
+                    "on-secondary": "#ffffff",
+                    "on-surface": "#191c1f",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#005662",
+                    "primary-fixed": "#e7deff",
+                    "background": "#f8f9fd",
+                    "on-secondary-fixed-variant": "#0040a0",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#1857c8",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#e1e2e6",
+                    "surface-container": "#edeef2",
+                    "on-tertiary-container": "#a7efff",
+                    "on-tertiary-fixed-variant": "#004e59",
+                    "on-tertiary-fixed": "#001f25",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#f8f9fd",
+                    "error": "#ba1a1a",
+                    "surface-dim": "#d9dade",
+                    "outline-variant": "#cac3d8",
+                    "surface-variant": "#e1e2e6",
+                    "primary": "#5315dc",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#1e0060",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed-variant": "#4c00d3",
+                    "inverse-on-surface": "#eff1f5",
+                    "tertiary-fixed-dim": "#45d8f1",
+                    "inverse-surface": "#2e3134",
+                    "inverse-primary": "#ccbeff",
+                    "tertiary-container": "#00707f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-lg": "24px",
+                    "stack-xl": "40px",
+                    "stack-md": "16px",
+                    "gutter": "16px",
+                    "stack-sm": "8px",
+                    "container-padding": "24px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "caption": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(108, 62, 244, 0.1);
+            box-shadow: 0 20px 40px rgba(108, 62, 244, 0.04);
+        }
+        .primary-gradient {
+            background: linear-gradient(135deg, #5315dc 0%, #1857c8 100%);
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #5315dc 0%, #1857c8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .floating-anim {
+            animation: floating 6s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        .quantum-pulse {
+            position: relative;
+        }
+        .quantum-pulse::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: inherit;
+            border: 2px solid #45d8f1;
+            opacity: 0;
+            animation: pulse-out 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes pulse-out {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/20 shadow-[0_20px_40px_rgba(108,62,244,0.04)]">
+<nav class="flex justify-between items-center px-container-padding h-20 max-w-7xl mx-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary font-headline-md">security</span>
+<span class="font-headline-md text-headline-md font-bold tracking-tight text-primary">LatticeLink</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-primary font-bold hover:bg-primary/10 transition-colors px-3 py-2 rounded-lg" href="#network">Network</a>
+<a class="text-on-surface-variant hover:bg-primary/10 transition-colors px-3 py-2 rounded-lg" href="#security">Security</a>
+<a class="text-on-surface-variant hover:bg-primary/10 transition-colors px-3 py-2 rounded-lg" href="#research">Research</a>
+<a class="text-on-surface-variant hover:bg-primary/10 transition-colors px-3 py-2 rounded-lg" href="#vault">Vault</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-primary font-bold text-label-md hidden sm:block">Live</span>
+<button class="primary-gradient text-on-primary px-6 py-2.5 rounded-full font-bold active:scale-95 duration-200 shadow-lg">Connect</button>
+</div>
+</nav>
+</header>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="relative min-h-[921px] flex items-center justify-center overflow-hidden px-container-padding">
+<!-- Animated Shader Background -->
+
+<div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-stack-xl items-center relative z-10">
+<div class="space-y-stack-lg">
+<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-caption animate-bounce">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+                        POST-QUANTUM READY
+                    </div>
+<h1 class="font-display-lg text-display-lg text-on-surface leading-tight">
+                        Securing Global Communications with <span class="text-gradient">Lattice-Based</span> Cryptography.
+                    </h1>
+<p class="text-body-lg text-on-surface-variant max-w-xl">
+                        LatticeLink provides an enterprise-grade, quantum-resistant communication layer designed for the next era of computational threats. Built on mathematically proven security primitives.
+                    </p>
+<div class="flex flex-wrap gap-4 pt-4">
+<button class="primary-gradient text-on-primary px-8 py-4 rounded-full font-bold text-body-md hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2">
+                            Get Started
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="bg-surface-container text-primary border border-primary/10 px-8 py-4 rounded-full font-bold text-body-md hover:bg-primary/5 active:scale-95 transition-all">
+                            View Research
+                        </button>
+</div>
+</div>
+<div class="relative flex justify-center items-center h-[500px] lg:h-[700px]">
+<!-- Holographic Earth Placeholder with Floating Animation -->
+<div class="relative w-full max-w-lg aspect-square floating-anim">
+<div class="absolute inset-0 bg-primary/20 blur-[100px] rounded-full"></div>
+<img class="w-full h-full object-contain relative z-10" data-alt="A highly detailed, glowing holographic Earth globe floating in a dark, tech-infused digital void. The Earth is rendered with shimmering blue and cyan neon lines representing a global data grid. Thousands of tiny floating particles and light trails emanate from the continents, suggesting a high-speed quantum network. The lighting is ethereal and futuristic, with a soft purple and electric blue glow that highlights the curvature of the planet." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqbflg_W9Tj10xdbWk9xxqDDnTcVJP-WCgvzQT4NL44RE6wXWFwXbaAqctyysHKOCNq-zVlpdb9Aq2A2iXT6XQiilWOjI3xBR1j85nylkHLI3oxCelAh-elwA5coWyVnzQtdnHiaEPXcq_zPTGX-NIJHLavm_6-iHWE9uBeFTwr3P4rm61VKHTht82t3W_2OlYhPFygLrmLMBPrJ_SMI02CLYQwHyyWXjlulooP2SP_DdbniEj1GS7R5vaYuaOdCT4Mgs8BKV_7Q3l"/>
+<!-- Orbiting Elements -->
+<div class="absolute top-1/4 -right-10 bg-surface/90 backdrop-blur-md p-4 rounded-2xl border border-primary/20 shadow-2xl z-20 flex items-center gap-3 animate-pulse">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed-dim flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">lock</span>
+</div>
+<div>
+<div class="text-caption font-bold text-on-surface-variant">SECURE NODE</div>
+<div class="text-label-md font-bold text-primary">Active-092</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Architecture Overview (Bento Grid) -->
+<section class="py-stack-xl px-container-padding bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto">
+<div class="text-center mb-stack-xl space-y-4">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">The LatticeLink Architecture</h2>
+<p class="text-body-md text-on-surface-variant max-w-2xl mx-auto">Our multi-layered approach ensures data integrity and privacy across diverse networks, from deep-sea cables to satellite relays.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Feature 1 -->
+<div class="md:col-span-8 glass-card p-stack-lg rounded-[22px] flex flex-col justify-between group hover:border-primary/40 transition-all">
+<div class="space-y-4">
+<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]">hub</span>
+</div>
+<h3 class="font-headline-md text-headline-md">Decentralized Mesh Protocol</h3>
+<p class="text-body-md text-on-surface-variant">LatticeLink utilizes a proprietary mesh distribution system that eliminates single points of failure, ensuring 99.999% uptime for enterprise-critical operations.</p>
+</div>
+<div class="mt-8 flex justify-end">
+<img class="h-40 object-contain" data-alt="A sophisticated architectural diagram showing a decentralized mesh network. Glowing nodes are interconnected by thin, crystalline filaments in a deep purple and cyan color scheme. The visual is minimalist yet complex, evoking a sense of high-end engineering and mathematical precision. High-key studio lighting highlights the translucent edges of the network structure." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5LIrnk_W9ACMXbwbaQPMJBRIzDxZgxwutSSwAcoXqV1yDwN_nxTX8QIyG814uabWYLJz-yX3lltBzHixuYIagMa9vUF41_xPMLt7MC12h8JBEnsJhcwqAYvqZGULPXKtVw7Jfb2D8MiE8Aj5t-OfXuRydD49ZkTrCo7Vh7FWKncHyB2ZQ5VnpCCdwQ_1kIEtQtOEKdCr06-czPn59tt2UGN-wWHUqSrJXxpSikLAxeViBnebgDxWh29BKJUkcDoxop8K_A7MAyoO2"/>
+</div>
+</div>
+<!-- Feature 2 -->
+<div class="md:col-span-4 glass-card p-stack-lg rounded-[22px] flex flex-col bg-gradient-to-br from-primary/5 to-transparent">
+<div class="w-14 h-14 rounded-2xl bg-tertiary/10 flex items-center justify-center text-tertiary mb-4">
+<span class="material-symbols-outlined text-[32px]">shield</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">Kyber-1024 Enforced</h3>
+<p class="text-body-md text-on-surface-variant mb-6">Implementing NIST-standardized CRYSTALS-Kyber for key encapsulation, providing the highest level of security against quantum computer attacks.</p>
+<div class="mt-auto overflow-hidden rounded-xl border border-outline/10">
+<img class="w-full h-32 object-cover" data-alt="Close-up of a high-tech circuit board with glowing paths of cyan light tracing through the logic gates. A central processor is highlighted with a royal purple aura, representing a quantum-secure chip. The image has a macro feel with shallow depth of field and soft bokeh effects in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF-nPk52J_peOya_V54dc0vDZg0hFEGY6gBYSaOIKC8YYM87vTflu2BEr3tIhdIG7clF71FM1lzV7hvYtL49dIk2TbEgumGtUXs9PobCsfd5gVpaT5x952IgHBmhg9AVu0M4XHLORnXAheu2hMUNdk6ghoEE6kY8tCZQZRQYmw7rI5J_PPdFw_hCMzXFYqfLZW5j9rmvUn14dZ2sI7IY3kgLMz9J6PVhTVaPdehS9C4DiY8YdEsTe3UcWPKi4mrCLkM2jI_s3gJttZ"/>
+</div>
+</div>
+<!-- Feature 3 -->
+<div class="md:col-span-4 glass-card p-stack-lg rounded-[22px]">
+<div class="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary mb-4">
+<span class="material-symbols-outlined text-[32px]">memory</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">ZKP Identity</h3>
+<p class="text-body-md text-on-surface-variant">Zero-Knowledge Proof authentication allows entities to verify their identity without revealing any sensitive metadata.</p>
+</div>
+<!-- Feature 4 -->
+<div class="md:col-span-8 glass-card p-stack-lg rounded-[22px] flex items-center gap-stack-lg bg-inverse-surface text-inverse-on-surface">
+<div class="hidden sm:block shrink-0">
+<span class="material-symbols-outlined text-[64px] text-primary-fixed-dim">analytics</span>
+</div>
+<div class="space-y-2">
+<h3 class="font-headline-md text-headline-md">Real-time Entropy Monitoring</h3>
+<p class="text-body-md text-outline-variant">Continuous auditing of system randomness using quantum-source entropy generators to prevent deterministic predictability.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Security Comparison Table -->
+<section class="py-stack-xl px-container-padding" id="security">
+<div class="max-w-5xl mx-auto glass-card rounded-[22px] overflow-hidden border border-primary/10">
+<div class="bg-primary/5 p-stack-lg border-b border-primary/10">
+<h2 class="font-headline-md text-headline-md">Security Standard Benchmarks</h2>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-label-md text-on-surface-variant border-b border-outline/10">
+<th class="p-6 font-bold">Standard</th>
+<th class="p-6 font-bold">Encryption</th>
+<th class="p-6 font-bold">Quantum Ready</th>
+<th class="p-6 font-bold">Lattice Verified</th>
+</tr>
+</thead>
+<tbody class="text-body-md">
+<tr class="border-b border-outline/5 hover:bg-primary/5 transition-colors">
+<td class="p-6 font-bold">Legacy Enterprise</td>
+<td class="p-6">RSA-4096 / AES-256</td>
+<td class="p-6 text-error">Critical Failure</td>
+<td class="p-6"><span class="material-symbols-outlined text-outline">close</span></td>
+</tr>
+<tr class="border-b border-outline/5 hover:bg-primary/5 transition-colors">
+<td class="p-6 font-bold">Defense Grade</td>
+<td class="p-6">ECC / AES-GCM</td>
+<td class="p-6 text-on-surface-variant">At Risk</td>
+<td class="p-6"><span class="material-symbols-outlined text-outline">close</span></td>
+</tr>
+<tr class="bg-primary/5">
+<td class="p-6 font-bold text-primary flex items-center gap-2">
+                                    LatticeLink
+                                    <span class="material-symbols-outlined text-[16px]">stars</span>
+</td>
+<td class="p-6 font-bold">Kyber-1024 / Dilithium</td>
+<td class="p-6 text-tertiary font-bold">Proven Immune</td>
+<td class="p-6"><span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- Global Network Map -->
+<section class="py-stack-xl px-container-padding bg-surface" id="network">
+<div class="max-w-7xl mx-auto space-y-stack-lg">
+<div class="flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="space-y-4">
+<h2 class="font-headline-lg text-headline-lg">Global Quantum Backbone</h2>
+<p class="text-body-md text-on-surface-variant">Connecting 142 secure regions across 6 continents with ultra-low latency.</p>
+</div>
+<div class="flex gap-4">
+<div class="px-4 py-2 bg-surface-container rounded-lg flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary-fixed-dim animate-pulse"></div>
+<span class="text-caption font-bold">Nodes Online: 4,821</span>
+</div>
+</div>
+</div>
+<div class="relative h-[400px] md:h-[600px] glass-card rounded-[22px] overflow-hidden group">
+<div class="absolute inset-0 z-0 grayscale opacity-20">
+<img class="w-full h-full object-cover" data-alt="A stylized global map showing geographic continents in a soft charcoal grey. Overlaid on the map is a network of vibrant, glowing cyan lines connecting major world cities. Each connection point is marked by a soft pulsing dot. The aesthetic is clean, professional, and corporate, with a deep focus on global connectivity and technical infrastructure." data-location="London" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT5qzJi2I1Hez5BtiEniDG1akLNFTLgkOqEN1Jo_HdISgFpKdKEoPBW6Gu6zIiAPwQ0l_1WG4mhr0oGgoagNojs3EaLSm6kR7hUOhaM9SZvo52C4gZEi6n5dg0sHJTPtXgkszHsvyaRCn7-EQ6aMv-yGPAoW2xDqVlwWrK7XEMIiPrD4F5wcguH8OLnhCNpmn6n04KizX1KJ2r2emH93-_LM__H_kVKKMMXVxpPaqkgcGshBa4eNfBnLPgemanZciVoSJ2TW0zeICX"/>
+</div>
+<!-- Dynamic Interaction Overlay -->
+<div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+<div class="w-full h-full relative">
+<!-- Simulated Hotspots -->
+<div class="absolute top-1/4 left-1/4 w-4 h-4 bg-primary rounded-full shadow-[0_0_20px_#5315dc] pointer-events-auto cursor-pointer quantum-pulse"></div>
+<div class="absolute top-1/3 left-1/2 w-4 h-4 bg-primary rounded-full shadow-[0_0_20px_#5315dc] pointer-events-auto cursor-pointer quantum-pulse"></div>
+<div class="absolute top-1/2 left-3/4 w-4 h-4 bg-primary rounded-full shadow-[0_0_20px_#5315dc] pointer-events-auto cursor-pointer quantum-pulse"></div>
+</div>
+</div>
+<div class="absolute bottom-6 left-6 z-20 glass-card p-4 rounded-xl border border-white/30 text-caption font-bold flex gap-8">
+<div>LATENCY: <span class="text-primary">&lt;14ms</span></div>
+<div>UPTIME: <span class="text-primary">99.999%</span></div>
+<div>PROTECTION: <span class="text-primary">ACTIVE</span></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Research Section -->
+<section class="py-stack-xl px-container-padding relative overflow-hidden" id="research">
+<div class="absolute top-0 right-0 w-1/3 h-full bg-primary/5 blur-[120px] rounded-full -z-10"></div>
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-stack-xl items-center">
+<div class="order-2 md:order-1">
+<img class="w-full rounded-[22px] shadow-2xl" data-alt="A stack of premium, minimalist research papers and whitepapers. The top paper has 'PQC: Lattice-Based Primitives' written in a clean sans-serif font. The scene is lit with cool, professional studio lighting, emphasizing the tactile quality of the paper and the sophisticated typography. Soft purple shadows are cast onto a pristine white desk." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDYLRCLLCNfQMYVTuSaWblHYpFc0tZ3ztIxw3rn5J01282lIzFa5sW5BpKdbsawG-jjDkZWLf5bDvK-j4xSrDUL-8fGochAEa9oyOYeJzu65v710afPtVSa2vE274RqcH9SwxLbVEeL8OEDjIfGOVoGTcSKrFV0onVOKnhzGDDlxVASWfl_JtvwgrGY5qw0JXBnFAf0sQU39aE0NhkFAzYS-9DZE0nt7ri7LoWfZsdYCcX3BsCPyXLIfl8FypqBhf2QBjALafUCXgs"/>
+</div>
+<div class="space-y-stack-md order-1 md:order-2">
+<span class="text-primary font-bold text-label-md tracking-widest uppercase">Pioneering Security</span>
+<h2 class="font-headline-lg text-headline-lg">Advancing Cryptography Through Rigorous Research</h2>
+<p class="text-body-md text-on-surface-variant">Our research team collaborates with leading global institutions to refine the mathematical bounds of lattice security. We don't just use standards; we help define them.</p>
+<ul class="space-y-4 pt-4">
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-primary">description</span>
+<div>
+<h4 class="font-bold text-on-surface">Analysis of Kyber Variants</h4>
+<p class="text-caption text-on-surface-variant">Peer-reviewed study on parameter optimization for enterprise scale.</p>
+</div>
+</li>
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-primary">description</span>
+<div>
+<h4 class="font-bold text-on-surface">Hybrid Classical-Quantum Protocols</h4>
+<p class="text-caption text-on-surface-variant">Frameworks for smooth transitions from RSA to PQC systems.</p>
+</div>
+</li>
+</ul>
+<div class="pt-6">
+<a class="inline-flex items-center gap-2 text-primary font-bold group" href="#">
+                            Explore Publication Library
+                            <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-stack-xl px-container-padding">
+<div class="max-w-7xl mx-auto glass-card rounded-[40px] p-12 md:p-24 text-center relative overflow-hidden bg-inverse-surface border-none">
+<!-- Particle Background for CTA -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+
+</div>
+<div class="relative z-10 space-y-stack-lg max-w-3xl mx-auto">
+<h2 class="font-display-lg text-display-lg text-white">Bridge the Gap to Quantum Security.</h2>
+<p class="text-body-lg text-primary-fixed-dim">Join the elite enterprises already routing their most sensitive data through the LatticeLink network.</p>
+<div class="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+<button class="bg-white text-primary px-10 py-5 rounded-full font-extrabold text-body-lg hover:bg-primary-fixed transition-colors active:scale-95 duration-150 shadow-2xl">
+                            Deploy LatticeLink Now
+                        </button>
+<button class="bg-transparent text-white border-2 border-white/20 px-10 py-5 rounded-full font-extrabold text-body-lg hover:bg-white/10 transition-colors active:scale-95 duration-150">
+                            Contact Engineering
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest py-16 px-container-padding">
+<div class="max-w-7xl mx-auto">
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-stack-lg border-b border-outline/10 pb-12">
+<div class="col-span-2 space-y-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary font-headline-md">security</span>
+<span class="font-headline-md text-headline-md font-bold tracking-tight text-primary">LatticeLink</span>
+</div>
+<p class="text-body-md text-on-surface-variant max-w-xs">The world's most resilient lattice-based communication infrastructure for the post-quantum era.</p>
+<div class="flex gap-4">
+<a class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all" href="#"><span class="material-symbols-outlined text-[20px]">hub</span></a>
+<a class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all" href="#"><span class="material-symbols-outlined text-[20px]">public</span></a>
+</div>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-6">Network</h5>
+<ul class="space-y-4 text-label-md text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">Architecture</a></li>
+<li><a class="hover:text-primary" href="#">Nodes</a></li>
+<li><a class="hover:text-primary" href="#">Scalability</a></li>
+<li><a class="hover:text-primary" href="#">Performance</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-6">Security</h5>
+<ul class="space-y-4 text-label-md text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">PQC Standards</a></li>
+<li><a class="hover:text-primary" href="#">Encryption</a></li>
+<li><a class="hover:text-primary" href="#">Vault</a></li>
+<li><a class="hover:text-primary" href="#">Compliance</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-6">Research</h5>
+<ul class="space-y-4 text-label-md text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">Whitepapers</a></li>
+<li><a class="hover:text-primary" href="#">Case Studies</a></li>
+<li><a class="hover:text-primary" href="#">Blog</a></li>
+<li><a class="hover:text-primary" href="#">Laboratory</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold text-on-surface mb-6">Legal</h5>
+<ul class="space-y-4 text-label-md text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">Privacy</a></li>
+<li><a class="hover:text-primary" href="#">Terms</a></li>
+<li><a class="hover:text-primary" href="#">SLA</a></li>
+<li><a class="hover:text-primary" href="#">Ethics</a></li>
+</ul>
+</div>
+</div>
+<div class="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-caption text-on-surface-variant">
+<p>© 2024 LatticeLink Systems. Secure globally, verify locally.</p>
+<div class="flex gap-6">
+<span>Status: <span class="text-tertiary">All Systems Optimal</span></span>
+<span>Version: 2.4.1-alpha</span>
+</div>
+</div>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/90 backdrop-blur-2xl border-t border-white/20 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+<div class="flex justify-around items-center h-20 pb-safe px-4">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">lock</span>
+<span class="font-label-md text-label-md">Vault</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">shield_lock</span>
+<span class="font-label-md text-label-md">Security</span>
+</button>
+</div>
+</nav>
+<script>
+        // Micro-interaction for table rows
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.transform = 'translateX(4px)';
+                row.style.transition = 'transform 0.2s ease-out';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.transform = 'translateX(0)';
+            });
+        });
+
+        // Simple smooth scroll highlight logic for active tab (simplified)
+        window.addEventListener('scroll', () => {
+            const sections = ['network', 'security', 'research'];
+            const navLinks = document.querySelectorAll('nav a');
+            
+            let current = "";
+            sections.forEach(section => {
+                const sectionTop = document.getElementById(section).offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section;
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-primary', 'font-bold');
+                link.classList.add('text-on-surface-variant');
+                if (link.getAttribute('href').includes(current) && current !== "") {
+                    link.classList.add('text-primary', 'font-bold');
+                    link.classList.remove('text-on-surface-variant');
+                }
+            });
+        });
+    </script>
+</body></html>

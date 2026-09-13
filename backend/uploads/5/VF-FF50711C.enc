@@ -1,0 +1,16 @@
+{
+  "platform": "LatticeLink Post-Quantum Cryptographic Network",
+  "version": "2.4.0-NIST-FIPS-203/204",
+  "exportedAt": "2026-09-13T16:14:05.473Z",
+  "node": {
+    "username": "sai",
+    "nodeId": "LL-798B0CE2",
+    "role": "USER",
+    "email": "saideekshad19@gmail.com"
+  },
+  "cryptographicCredentials": {
+    "mlKemPublicKey": "KYBER-1024-STANDARD",
+    "mlDsaPublicKey": "DILITHIUM-87-STANDARD",
+    "securityProfile": "NIST Category 5 Level Quantum Tamper Resistant"
+  }
+}
