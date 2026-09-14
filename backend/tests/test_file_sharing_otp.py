@@ -47,16 +47,12 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
     # -------------------------------------------------------------
     # PART B & C: REGISTRATION, 6-DIGIT OTP & EMAIL VERIFICATION
     # -------------------------------------------------------------
-    def test_registration_without_smtp_fails_gracefully(self):
-        """When SMTP is not configured, registration fails with clear configuration error (HTTP 503)."""
-        from config import Config
-        orig_server = Config.MAIL_SERVER
-        orig_username = Config.MAIL_USERNAME
-        orig_password = Config.MAIL_PASSWORD
-        try:
-            Config.MAIL_SERVER = ''
-            Config.MAIL_USERNAME = ''
-            Config.MAIL_PASSWORD = ''
+    def test_registration_without_resend_fails_gracefully(self):
+        """When Resend is not configured, registration fails with clear configuration error (HTTP 503)."""
+        from unittest.mock import patch
+        with patch.dict(os.environ, {'RESEND_API_KEY': '', 'RESEND_FROM': ''}, clear=False):
+            os.environ.pop('RESEND_API_KEY', None)
+            os.environ.pop('RESEND_FROM', None)
             res = self.client.post('/api/auth/register', json={
                 'username': 'nosmtp_user',
                 'email': 'nosmtp@example.com',
@@ -64,13 +60,9 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
             })
             self.assertEqual(res.status_code, 503)
             data = res.get_json()
-            self.assertIn('SMTP is not configured', data.get('error', ''))
+            self.assertIn('RESEND_API_KEY is not configured', data.get('error', ''))
             self.assertNotIn('dev_otp', data)
             self.assertNotIn('otp', data)
-        finally:
-            Config.MAIL_SERVER = orig_server
-            Config.MAIL_USERNAME = orig_username
-            Config.MAIL_PASSWORD = orig_password
 
     def test_registration_valid_with_mocked_smtp(self):
         """Test valid registration creates unverified user and sends 6-digit OTP token via SMTP."""
