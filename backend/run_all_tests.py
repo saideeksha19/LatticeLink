@@ -6,18 +6,21 @@ os.environ['LATTICELINK_TEST_MODE'] = 'True'
 test_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'latticelink_test.db')
 os.environ['DATABASE_URL'] = f"sqlite:///{test_db_path.replace(os.sep, '/')}"
 
-# Dummy Resend credentials for tests. The Resend API call itself is mocked below,
-# so nothing is ever sent and no real key is required or used.
-os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
-os.environ.setdefault('RESEND_FROM', 'LatticeLink Test <test@latticelink.test>')
+# Dummy Gmail SMTP credentials for tests. smtplib.SMTP is mocked below, so
+# nothing is ever sent and no real credentials are required or used.
+os.environ.setdefault('MAIL_SERVER', 'smtp.gmail.com')
+os.environ.setdefault('MAIL_PORT', '587')
+os.environ.setdefault('MAIL_USE_TLS', 'true')
+os.environ.setdefault('MAIL_USERNAME', 'latticelink.test.sender@gmail.com')
+os.environ.setdefault('MAIL_PASSWORD', 'test-dummy-app-password')
+os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
 
 import unittest
 from unittest.mock import patch
 
-# Mock out external network calls to the Resend API so tests run instantly,
-# deterministically, and without consuming quota.
-patcher = patch('services.email_service.resend.Emails.send', return_value={'id': 'test-email-id'})
-mock_resend_send = patcher.start()
+# Mock out external network SMTP calls so tests run instantly and deterministically
+patcher = patch('services.email_service.smtplib.SMTP')
+mock_smtp = patcher.start()
 
 if __name__ == '__main__':
     loader = unittest.TestLoader()

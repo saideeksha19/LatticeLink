@@ -8,10 +8,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Dummy Resend credentials for the sandboxed registration proof below; the
-# subprocess mocks the Resend send call, so nothing real is dispatched.
-os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
-os.environ.setdefault('RESEND_FROM', 'LatticeLink Test <test@latticelink.test>')
+# Dummy Gmail SMTP credentials for the sandboxed registration proof below; the
+# subprocess mocks smtplib.SMTP, so nothing real is dispatched.
+os.environ.setdefault('MAIL_SERVER', 'smtp.gmail.com')
+os.environ.setdefault('MAIL_PORT', '587')
+os.environ.setdefault('MAIL_USE_TLS', 'true')
+os.environ.setdefault('MAIL_USERNAME', 'latticelink.test.sender@gmail.com')
+os.environ.setdefault('MAIL_PASSWORD', 'test-dummy-app-password')
+os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
 
 DEV_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink.db')
 TEST_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink_test.db')
@@ -156,7 +160,7 @@ class TestDatabaseSafetyArchitecture(unittest.TestCase):
             "with app.app_context():\n"
             "    db.create_all()\n"
             "client = app.test_client()\n"
-            "with patch('services.email_service.resend.Emails.send', return_value={'id': 'test-email-id'}):\n"
+            "with patch('services.email_service.smtplib.SMTP'):\n"
             "    reg_res = client.post('/api/auth/register', json={'username': 'SafetyVerifyUser', 'email': 'safety_verify@example.com', 'password': 'TestPassw0rd123!Secure'})\n"
             "    assert reg_res.status_code in (200, 201), f'Reg failed: {reg_res.status_code}'\n"
             "    conn = sqlite3.connect(r'" + TEST_DB_PATH + "')\n"

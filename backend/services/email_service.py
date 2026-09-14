@@ -1,8 +1,12 @@
 import os
+import smtplib
 import logging
-import resend
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger("LatticeLink.EmailService")
+
+SMTP_TIMEOUT_SECONDS = 20
 
 
 class SMTPConfigurationError(Exception):
@@ -15,41 +19,52 @@ class SMTPSendError(Exception):
     pass
 
 
-def _get_resend_api_key():
+def _get_mail_config():
     """
-    Get the Resend API key from the environment.
+    Read the mail configuration from environment variables only.
 
-    The key is read at call time and is never logged, returned, or stored.
+    Required:
+        MAIL_USERNAME          -> the sending Gmail address
+        MAIL_PASSWORD          -> the Gmail App Password (never logged, returned, or stored)
+        MAIL_DEFAULT_SENDER    -> the sender address shown to recipients
+                                  (falls back to MAIL_FROM, then MAIL_USERNAME)
+
+    Optional:
+        MAIL_SERVER            -> defaults to smtp.gmail.com
+        MAIL_PORT              -> defaults to 587
+        MAIL_USE_TLS           -> defaults to true
+
+    The credentials are read at call time and are never logged, returned,
+    or embedded in error messages.
     """
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    username = os.getenv("MAIL_USERNAME", "").strip()
+    password = os.getenv("MAIL_PASSWORD", "").strip()
 
-    if not api_key:
+    if not username or not password:
         raise SMTPConfigurationError(
-            "RESEND_API_KEY is not configured. "
-            "Add it to the Render environment variables."
+            "MAIL_USERNAME and MAIL_PASSWORD are not configured. "
+            "Set them (Gmail address + Gmail App Password) in the "
+            "Render environment variables."
         )
 
-    return api_key
+    sender = (
+        os.getenv("MAIL_DEFAULT_SENDER", "").strip()
+        or os.getenv("MAIL_FROM", "").strip()
+        or username
+    )
 
+    server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip() or "smtp.gmail.com"
 
-def _get_from_email():
-    """
-    Get the verified Resend sender identity from the RESEND_FROM
-    environment variable (e.g. "LatticeLink <noreply@yourdomain.com>").
-
-    It must be a sender identity verified in your Resend account.
-    "onboarding@resend.dev" may be used for sandbox testing only.
-    """
-
-    from_email = os.getenv("RESEND_FROM", "").strip()
-
-    if not from_email:
+    try:
+        port = int(os.getenv("MAIL_PORT", "587").strip() or "587")
+    except ValueError:
         raise SMTPConfigurationError(
-            "RESEND_FROM is not configured. "
-            "Add a verified sender identity to the Render environment variables."
+            "MAIL_PORT must be an integer (e.g. 587)."
         )
 
-    return from_email
+    use_tls = os.getenv("MAIL_USE_TLS", "true").strip().lower() in ("1", "true", "yes", "on")
+
+    return server, port, use_tls, username, password, sender
 
 
 def _send_email(
@@ -59,36 +74,36 @@ def _send_email(
     html_content: str
 ) -> bool:
     """
-    Send email through Resend API.
+    Send email through Gmail SMTP using smtplib.
     """
-
     try:
-        api_key = _get_resend_api_key()
-        from_email = _get_from_email()
+        server_host, port, use_tls, username, password, sender = _get_mail_config()
 
-        resend.api_key = api_key
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"LatticeLink <{sender}>"
+        msg["To"] = to_email
 
-        params = {
-            "from": from_email,
-            "to": [to_email],
-            "subject": subject,
-            "text": text_content,
-            "html": html_content,
-        }
+        msg.attach(MIMEText(text_content, "plain"))
+        msg.attach(MIMEText(html_content, "html"))
 
         logger.info(
-            "Sending email through Resend. "
-            "From=%s To=%s Subject=%s",
-            from_email,
+            "Sending OTP email via SMTP. From=%s To=%s Subject=%s",
+            sender,
             to_email,
             subject
         )
 
-        response = resend.Emails.send(params)
+        with smtplib.SMTP(server_host, port, timeout=SMTP_TIMEOUT_SECONDS) as server:
+            if use_tls:
+                server.starttls()
+            server.login(username, password)
+            server.sendmail(sender, [to_email], msg.as_string())
 
         logger.info(
-            "Email successfully dispatched via Resend. Response=%s",
-            response
+            "Email successfully dispatched via SMTP to %s (Subject: %s)",
+            to_email,
+            subject
         )
 
         return True
@@ -96,15 +111,30 @@ def _send_email(
     except SMTPConfigurationError:
         raise
 
-    except Exception as e:
+    except smtplib.SMTPException as e:
+        # Log only the exception class name: exception payloads must never
+        # leak MAIL_PASSWORD or any other credential.
         logger.error(
-            "Resend email delivery failed. To=%s Error=%s",
+            "SMTP dispatch to %s failed: %s",
             to_email,
-            e
+            e.__class__.__name__
         )
 
         raise SMTPSendError(
-            f"Email delivery failed: {str(e)}"
+            "Email delivery failed via SMTP. Verify MAIL_USERNAME, "
+            "MAIL_PASSWORD (Gmail App Password), and network access to "
+            "the mail server."
+        )
+
+    except Exception as e:
+        logger.error(
+            "Unexpected error during email dispatch to %s: %s",
+            to_email,
+            e.__class__.__name__
+        )
+
+        raise SMTPSendError(
+            "Email delivery failed via SMTP: unexpected error."
         )
 
 
