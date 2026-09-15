@@ -1,23 +1,29 @@
 """
-Unit tests for the Gmail SMTP email service.
+Unit tests for the Brevo-API email service.
 
-These tests mock smtplib entirely: no network calls are made and no real
-Gmail credentials are used. They verify that:
-  - verification and password-reset OTPs are dispatched via smtplib.SMTP
-  - MAIL_USERNAME / MAIL_PASSWORD / MAIL_DEFAULT_SENDER come from the
-    environment only
+These tests mock the provider HTTP layer entirely: no network calls are made
+and no real API key is used. They verify that:
+  - verification and password-reset OTPs are dispatched to the RECIPIENT
+    email passed in (dynamic per-user delivery)
+  - BREVO_API_KEY and MAIL_DEFAULT_SENDER are sourced from the environment
+    only, and the API key never appears in logs, payloads, or error messages
   - missing configuration raises SMTPConfigurationError (HTTP 503 path)
-  - SMTP failures raise SMTPSendError (HTTP 500 path)
-  - the App Password never leaks into logs, headers, or the message body
+  - provider errors (401/403/500, timeouts, network failures) raise
+    SMTPSendError (HTTP 500 path) without leaking secrets
+  - invalid recipients are rejected before any API call
 """
 import os
 import sys
+import json
+import io
 import unittest
 from unittest.mock import patch, MagicMock
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+
+import urllib.error
 
 from services.email_service import (
     _send_email,
@@ -28,99 +34,161 @@ from services.email_service import (
 )
 
 TEST_ENV = {
-    'MAIL_SERVER': 'smtp.gmail.com',
-    'MAIL_PORT': '587',
-    'MAIL_USE_TLS': 'true',
-    'MAIL_USERNAME': 'latticelink.test.sender@gmail.com',
-    'MAIL_PASSWORD': 'test-dummy-app-password',
+    'BREVO_API_KEY': 'test-dummy-brevo-api-key',
     'MAIL_DEFAULT_SENDER': 'latticelink.test.sender@gmail.com',
 }
 
 
-def _make_smtp_mock():
-    """Build a mock smtplib.SMTP context manager returning (mock, instance)."""
-    smtp_instance = MagicMock()
-    factory = MagicMock(return_value=smtp_instance)
-    factory.return_value.__enter__.return_value = smtp_instance
-    return factory, smtp_instance
+def _make_urlopen_mock(status=201, body=b'{"messageId": "test-message-id"}'):
+    """Build a mock for urllib.request.urlopen returning a response-like object.
+
+    Mirrors the real urlopen contract: the object returned by the call is a
+    context manager whose __enter__ yields itself (like HTTPResponse).
+    """
+    response = MagicMock()
+    response.status = status
+    response.read.return_value = body
+    response.getcode.return_value = status
+    factory = MagicMock(return_value=response)
+    factory.return_value.__enter__.return_value = response
+    factory.return_value.__exit__.return_value = False
+    return factory
 
 
-class TestGmailSMTPEmailService(unittest.TestCase):
-    def test_verification_otp_dispatches_via_smtp(self):
-        factory, smtp = _make_smtp_mock()
+class TestBrevoEmailService(unittest.TestCase):
+    # ---------------------------------------------------------------
+    # A. New registration-style dispatch / F. dynamic recipients
+    # ---------------------------------------------------------------
+    def test_verification_otp_sent_to_dynamic_recipient(self):
+        urlopen = _make_urlopen_mock()
         with patch.dict(os.environ, TEST_ENV, clear=False):
-            with patch('services.email_service.smtplib.SMTP', factory):
-                result = send_verification_otp('user@example.com', 'alice', '123456')
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                self.assertTrue(send_verification_otp('userA@example.com', 'alice', '123456'))
+                self.assertTrue(send_verification_otp('userB@yahoo.com', 'bob', '654321'))
 
-        self.assertTrue(result)
-        factory.assert_called_once_with('smtp.gmail.com', 587, timeout=20)
-        smtp_instance = factory.return_value.__enter__.return_value
-        smtp_instance.starttls.assert_called_once()
-        smtp_instance.login.assert_called_once_with(
-            'latticelink.test.sender@gmail.com', 'test-dummy-app-password'
-        )
-        smtp_instance.sendmail.assert_called_once()
-        args = smtp_instance.sendmail.call_args[0]
-        self.assertEqual(args[0], 'latticelink.test.sender@gmail.com')
-        self.assertEqual(args[1], ['user@example.com'])
-        raw_message = args[2]
-        self.assertIn('123456', raw_message)
-        self.assertNotIn(TEST_ENV['MAIL_PASSWORD'], raw_message)
+        self.assertEqual(urlopen.call_count, 2)
+        first_req, second_req = urlopen.call_args_list[0][0][0], urlopen.call_args_list[1][0][0]
+        self.assertEqual(json.loads(first_req.data.decode('utf-8'))['to'], [{'email': 'userA@example.com'}])
+        self.assertEqual(json.loads(second_req.data.decode('utf-8'))['to'], [{'email': 'userB@yahoo.com'}])
 
-    def test_password_reset_otp_dispatches_via_smtp(self):
-        factory, _ = _make_smtp_mock()
+    def test_request_contract_matches_brevo_api(self):
+        urlopen = _make_urlopen_mock()
         with patch.dict(os.environ, TEST_ENV, clear=False):
-            with patch('services.email_service.smtplib.SMTP', factory):
-                result = send_password_reset_otp('user@example.com', 'bob', '654321')
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                send_verification_otp('userA@example.com', 'alice', '123456')
 
-        self.assertTrue(result)
-        smtp_instance = factory.return_value.__enter__.return_value
-        smtp_instance.sendmail.assert_called_once()
-        raw_message = smtp_instance.sendmail.call_args[0][2]
-        self.assertIn('654321', raw_message)
-        self.assertIn('Password Reset', raw_message)
-        self.assertNotIn(TEST_ENV['MAIL_PASSWORD'], raw_message)
+        req = urlopen.call_args[0][0]
+        self.assertEqual(req.full_url, 'https://api.brevo.com/v3/smtp/email')
+        self.assertEqual(req.get_method(), 'POST')
+        # API key travels in the header only
+        self.assertEqual(req.headers.get('Api-key'), 'test-dummy-brevo-api-key')
+        self.assertEqual(req.headers.get('Content-type'), 'application/json')
+        # API key must NOT appear anywhere in the JSON payload
+        self.assertNotIn(TEST_ENV['BREVO_API_KEY'], req.data.decode('utf-8'))
 
-    def test_missing_mail_username_raises_configuration_error(self):
+        payload = json.loads(req.data.decode('utf-8'))
+        self.assertEqual(payload['sender'], {'name': 'LatticeLink', 'email': 'latticelink.test.sender@gmail.com'})
+        self.assertIn('123456', payload['textContent'])
+        self.assertIn('123456', payload['htmlContent'])
+
+    # ---------------------------------------------------------------
+    # E. Password reset dispatch
+    # ---------------------------------------------------------------
+    def test_password_reset_otp_sent_to_recipient(self):
+        urlopen = _make_urlopen_mock()
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                self.assertTrue(send_password_reset_otp('resetter@gmail.com', 'carol', '246810'))
+
+        payload = json.loads(urlopen.call_args[0][0].data.decode('utf-8'))
+        self.assertEqual(payload['to'], [{'email': 'resetter@gmail.com'}])
+        self.assertIn('246810', payload['textContent'])
+        self.assertIn('Password Reset', payload['subject'])
+
+    # ---------------------------------------------------------------
+    # G. Missing configuration -> safe, clear error, no provider call
+    # ---------------------------------------------------------------
+    def test_missing_api_key_raises_configuration_error(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop('MAIL_USERNAME', None)
-            os.environ.pop('MAIL_PASSWORD', None)
-            factory, smtp = _make_smtp_mock()
-            with patch('services.email_service.smtplib.SMTP', factory):
-                with self.assertRaises(SMTPConfigurationError):
+            os.environ.pop('BREVO_API_KEY', None)
+            urlopen = _make_urlopen_mock()
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPConfigurationError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        smtp_instance = factory.return_value.__enter__.return_value
-        smtp_instance.sendmail.assert_not_called()
+        self.assertIn('BREVO_API_KEY is not configured', str(ctx.exception))
+        urlopen.assert_not_called()
 
-    def test_missing_mail_password_raises_configuration_error(self):
-        with patch.dict(os.environ, {'MAIL_USERNAME': 'sender@gmail.com'}, clear=False):
-            os.environ.pop('MAIL_PASSWORD', None)
-            factory, smtp = _make_smtp_mock()
-            with patch('services.email_service.smtplib.SMTP', factory):
-                with self.assertRaises(SMTPConfigurationError):
+    def test_missing_sender_raises_configuration_error(self):
+        with patch.dict(os.environ, {'BREVO_API_KEY': 'test-dummy-brevo-api-key'}, clear=False):
+            os.environ.pop('MAIL_DEFAULT_SENDER', None)
+            os.environ.pop('MAIL_FROM', None)
+            urlopen = _make_urlopen_mock()
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPConfigurationError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        smtp_instance = factory.return_value.__enter__.return_value
-        smtp_instance.sendmail.assert_not_called()
+        self.assertIn('MAIL_DEFAULT_SENDER is not configured', str(ctx.exception))
+        urlopen.assert_not_called()
 
-    def test_smtp_failure_raises_send_error(self):
-        factory, smtp = _make_smtp_mock()
+    # ---------------------------------------------------------------
+    # Provider failure paths (C/D-adjacent: delivery errors, not OTP logic)
+    # ---------------------------------------------------------------
+    def test_provider_401_raises_send_error_without_leaking_key(self):
+        http_error = urllib.error.HTTPError(
+            'https://api.brevo.com/v3/smtp/email', 401, 'Unauthorized', {},
+            io.BytesIO(b'{"code": "unauthorized", "message": "invalid key test-dummy-brevo-api-key"}')
+        )
+        urlopen = MagicMock(side_effect=http_error)
         with patch.dict(os.environ, TEST_ENV, clear=False):
-            with patch('services.email_service.smtplib.SMTP', factory):
-                smtp_instance = factory.return_value.__enter__.return_value
-                smtp_instance.sendmail.side_effect = Exception('SMTP connection refused')
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPSendError) as ctx:
+                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
+        self.assertIn('rejected the server credentials', str(ctx.exception))
+        self.assertNotIn(TEST_ENV['BREVO_API_KEY'], str(ctx.exception))
+
+    def test_provider_500_raises_generic_send_error(self):
+        http_error = urllib.error.HTTPError(
+            'https://api.brevo.com/v3/smtp/email', 500, 'Internal Server Error', {},
+            io.BytesIO(b'{"code": "server_error"}')
+        )
+        urlopen = MagicMock(side_effect=http_error)
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError):
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
 
-    def test_password_not_leaked_in_headers_or_body(self):
-        factory, _ = _make_smtp_mock()
+    def test_provider_timeout_raises_send_error(self):
+        urlopen = MagicMock(side_effect=TimeoutError('timed out'))
         with patch.dict(os.environ, TEST_ENV, clear=False):
-            with patch('services.email_service.smtplib.SMTP', factory):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPSendError) as ctx:
+                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
+        self.assertNotIn('test-dummy-brevo-api-key', str(ctx.exception))
+
+    # ---------------------------------------------------------------
+    # Recipient validation / injection protection
+    # ---------------------------------------------------------------
+    def test_invalid_recipients_are_rejected_before_api_call(self):
+        urlopen = _make_urlopen_mock()
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                for bad in ['', 'not-an-email', 'a@b', 'a b@example.com',
+                            'user@example.com\r\nBcc: victim@example.com']:
+                    with self.assertRaises(SMTPSendError):
+                        send_verification_otp(bad, 'mallory', '111111')
+        urlopen.assert_not_called()
+
+    # ---------------------------------------------------------------
+    # Credential hygiene
+    # ---------------------------------------------------------------
+    def test_api_key_never_appears_in_payloads(self):
+        urlopen = _make_urlopen_mock()
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
                 send_verification_otp('user@example.com', 'alice', '123456')
-        smtp_instance = factory.return_value.__enter__.return_value
-        raw_message = smtp_instance.sendmail.call_args[0][2]
-        self.assertNotIn(TEST_ENV['MAIL_PASSWORD'], raw_message)
-        self.assertNotIn('App-Password', raw_message)
-        self.assertNotIn('Authorization', raw_message)
+                send_password_reset_otp('user@example.com', 'bob', '654321')
+
+        for call in urlopen.call_args_list:
+            self.assertNotIn(TEST_ENV['BREVO_API_KEY'], call[0][0].data.decode('utf-8'))
 
 
 if __name__ == '__main__':

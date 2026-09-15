@@ -6,21 +6,28 @@ os.environ['LATTICELINK_TEST_MODE'] = 'True'
 test_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'latticelink_test.db')
 os.environ['DATABASE_URL'] = f"sqlite:///{test_db_path.replace(os.sep, '/')}"
 
-# Dummy Gmail SMTP credentials for tests. smtplib.SMTP is mocked below, so
-# nothing is ever sent and no real credentials are required or used.
-os.environ.setdefault('MAIL_SERVER', 'smtp.gmail.com')
-os.environ.setdefault('MAIL_PORT', '587')
-os.environ.setdefault('MAIL_USE_TLS', 'true')
-os.environ.setdefault('MAIL_USERNAME', 'latticelink.test.sender@gmail.com')
-os.environ.setdefault('MAIL_PASSWORD', 'test-dummy-app-password')
+# Dummy email provider configuration for tests. The provider HTTP call is
+# mocked below, so nothing is ever sent and no real key is required or used.
+os.environ.setdefault('BREVO_API_KEY', 'test-dummy-brevo-api-key')
 os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
-# Mock out external network SMTP calls so tests run instantly and deterministically
-patcher = patch('services.email_service.smtplib.SMTP')
-mock_smtp = patcher.start()
+# Mock out external network calls to the email provider so tests run instantly,
+# deterministically, and without consuming quota.
+_provider_response = MagicMock()
+_provider_response.status = 201
+_provider_response.getcode.return_value = 201
+_provider_response.read.return_value = b'{"messageId": "test-message-id"}'
+_provider_response.close.return_value = None
+
+_provider_urlopen = MagicMock(return_value=_provider_response)
+_provider_urlopen.return_value.__enter__.return_value = _provider_response
+_provider_urlopen.return_value.__exit__.return_value = False
+
+patcher = patch('services.email_service.urllib.request.urlopen', _provider_urlopen)
+mock_provider_http = patcher.start()
 
 if __name__ == '__main__':
     loader = unittest.TestLoader()

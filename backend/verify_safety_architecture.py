@@ -8,13 +8,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Dummy Gmail SMTP credentials for the sandboxed registration proof below; the
-# subprocess mocks smtplib.SMTP, so nothing real is dispatched.
-os.environ.setdefault('MAIL_SERVER', 'smtp.gmail.com')
-os.environ.setdefault('MAIL_PORT', '587')
-os.environ.setdefault('MAIL_USE_TLS', 'true')
-os.environ.setdefault('MAIL_USERNAME', 'latticelink.test.sender@gmail.com')
-os.environ.setdefault('MAIL_PASSWORD', 'test-dummy-app-password')
+# Dummy email provider configuration for the sandboxed registration proof
+# below; the subprocess mocks the provider HTTP call, so nothing is dispatched.
+os.environ.setdefault('BREVO_API_KEY', 'test-dummy-brevo-api-key')
 os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
 
 DEV_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink.db')
@@ -159,8 +155,11 @@ class TestDatabaseSafetyArchitecture(unittest.TestCase):
             "from models import db\n"
             "with app.app_context():\n"
             "    db.create_all()\n"
+            "from unittest.mock import patch, MagicMock\n"
+            "_resp = MagicMock(); _resp.status = 201; _resp.getcode.return_value = 201; _resp.read.return_value = b'{}'; _resp.close.return_value = None\n"
+            "_u = MagicMock(return_value=_resp); _u.return_value.__enter__.return_value = _resp; _u.return_value.__exit__.return_value = False\n"
             "client = app.test_client()\n"
-            "with patch('services.email_service.smtplib.SMTP'):\n"
+            "with patch('services.email_service.urllib.request.urlopen', _u):\n"
             "    reg_res = client.post('/api/auth/register', json={'username': 'SafetyVerifyUser', 'email': 'safety_verify@example.com', 'password': 'TestPassw0rd123!Secure'})\n"
             "    assert reg_res.status_code in (200, 201), f'Reg failed: {reg_res.status_code}'\n"
             "    conn = sqlite3.connect(r'" + TEST_DB_PATH + "')\n"

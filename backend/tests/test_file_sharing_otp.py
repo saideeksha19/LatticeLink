@@ -48,11 +48,11 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
     # PART B & C: REGISTRATION, 6-DIGIT OTP & EMAIL VERIFICATION
     # -------------------------------------------------------------
     def test_registration_without_smtp_fails_gracefully(self):
-        """When Gmail SMTP is not configured, registration fails with clear configuration error (HTTP 503)."""
+        """When the email provider is not configured, registration fails with clear configuration error (HTTP 503)."""
         from unittest.mock import patch
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop('MAIL_USERNAME', None)
-            os.environ.pop('MAIL_PASSWORD', None)
+            os.environ.pop('BREVO_API_KEY', None)
+            os.environ.pop('MAIL_DEFAULT_SENDER', None)
             res = self.client.post('/api/auth/register', json={
                 'username': 'nosmtp_user',
                 'email': 'nosmtp@example.com',
@@ -60,7 +60,7 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
             })
             self.assertEqual(res.status_code, 503)
             data = res.get_json()
-            self.assertIn('MAIL_USERNAME and MAIL_PASSWORD are not configured', data.get('error', ''))
+            self.assertIn('BREVO_API_KEY is not configured', data.get('error', ''))
             self.assertNotIn('dev_otp', data)
             self.assertNotIn('otp', data)
 

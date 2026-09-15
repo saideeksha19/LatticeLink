@@ -1,12 +1,18 @@
 import os
-import smtplib
+import re
+import json
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import urllib.request
+import urllib.error
 
 logger = logging.getLogger("LatticeLink.EmailService")
 
-SMTP_TIMEOUT_SECONDS = 20
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+HTTP_TIMEOUT_SECONDS = 20
+_SENDER_NAME = "LatticeLink"
+
+# Simple RFC-5322-style sanity check: local@domain.tld, no whitespace.
+_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class SMTPConfigurationError(Exception):
@@ -19,52 +25,65 @@ class SMTPSendError(Exception):
     pass
 
 
-def _get_mail_config():
+def _get_brevo_config():
     """
-    Read the mail configuration from environment variables only.
+    Read the email provider configuration from environment variables only.
 
     Required:
-        MAIL_USERNAME          -> the sending Gmail address
-        MAIL_PASSWORD          -> the Gmail App Password (never logged, returned, or stored)
-        MAIL_DEFAULT_SENDER    -> the sender address shown to recipients
-                                  (falls back to MAIL_FROM, then MAIL_USERNAME)
+        BREVO_API_KEY         -> Brevo API key (server-side only; never logged,
+                                 returned, or committed). Create it for free at
+                                 https://app.brevo.com (SMTP & API -> API keys).
 
-    Optional:
-        MAIL_SERVER            -> defaults to smtp.gmail.com
-        MAIL_PORT              -> defaults to 587
-        MAIL_USE_TLS           -> defaults to true
+    Required (verified sender):
+        MAIL_DEFAULT_SENDER   -> the sender address shown to recipients; it must
+                                 be a sender verified in the Brevo account.
+                                 (Falls back to legacy MAIL_FROM if set.)
 
-    The credentials are read at call time and are never logged, returned,
-    or embedded in error messages.
+    Credentials are read at call time and are never logged, returned, or
+    embedded in error messages. No MAIL_USERNAME / MAIL_PASSWORD are needed.
     """
-    username = os.getenv("MAIL_USERNAME", "").strip()
-    password = os.getenv("MAIL_PASSWORD", "").strip()
+    api_key = os.getenv("BREVO_API_KEY", "").strip()
 
-    if not username or not password:
+    if not api_key:
         raise SMTPConfigurationError(
-            "MAIL_USERNAME and MAIL_PASSWORD are not configured. "
-            "Set them (Gmail address + Gmail App Password) in the "
-            "Render environment variables."
+            "BREVO_API_KEY is not configured. Add the Brevo API key to the "
+            "Render environment variables (server-side only)."
         )
 
     sender = (
         os.getenv("MAIL_DEFAULT_SENDER", "").strip()
         or os.getenv("MAIL_FROM", "").strip()
-        or username
     )
 
-    server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip() or "smtp.gmail.com"
-
-    try:
-        port = int(os.getenv("MAIL_PORT", "587").strip() or "587")
-    except ValueError:
+    if not sender:
         raise SMTPConfigurationError(
-            "MAIL_PORT must be an integer (e.g. 587)."
+            "MAIL_DEFAULT_SENDER is not configured. Set it to a sender "
+            "address verified in your Brevo account."
         )
 
-    use_tls = os.getenv("MAIL_USE_TLS", "true").strip().lower() in ("1", "true", "yes", "on")
+    if "@" not in sender or not _EMAIL_PATTERN.match(sender):
+        raise SMTPConfigurationError(
+            "MAIL_DEFAULT_SENDER must be a valid email address."
+        )
 
-    return server, port, use_tls, username, password, sender
+    return api_key, sender
+
+
+def _validate_recipient(to_email: str) -> str:
+    """
+    Validate the recipient address and return it in canonical form.
+    Prevents header/API injection by rejecting anything that is not a
+    plain single address.
+    """
+    recipient = (to_email or "").strip()
+
+    if not recipient or len(recipient) > 254:
+        raise SMTPSendError("Invalid recipient email address.")
+
+    if recipient.count("@") != 1 or not _EMAIL_PATTERN.match(recipient):
+        raise SMTPSendError("Invalid recipient email address.")
+
+    return recipient
 
 
 def _send_email(
@@ -74,36 +93,64 @@ def _send_email(
     html_content: str
 ) -> bool:
     """
-    Send email through Gmail SMTP using smtplib.
+    Send email through the Brevo transactional email API (free tier).
+
+    The API key travels only in the request header of this server-to-server
+    call. It is never logged, returned to clients, or written to the database.
     """
     try:
-        server_host, port, use_tls, username, password, sender = _get_mail_config()
+        api_key, sender = _get_brevo_config()
+        recipient = _validate_recipient(to_email)
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"LatticeLink <{sender}>"
-        msg["To"] = to_email
+        payload = {
+            "sender": {
+                "name": _SENDER_NAME,
+                "email": sender,
+            },
+            "to": [{"email": recipient}],
+            "subject": subject,
+            "textContent": text_content,
+            "htmlContent": html_content,
+        }
 
-        msg.attach(MIMEText(text_content, "plain"))
-        msg.attach(MIMEText(html_content, "html"))
+        body = json.dumps(payload).encode("utf-8")
+
+        request = urllib.request.Request(
+            BREVO_API_URL,
+            data=body,
+            method="POST",
+            headers={
+                "api-key": api_key,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "latticelink-backend",
+            },
+        )
 
         logger.info(
-            "Sending OTP email via SMTP. From=%s To=%s Subject=%s",
+            "Sending OTP email via provider. From=%s To=%s Subject=%s",
             sender,
-            to_email,
+            recipient,
             subject
         )
 
-        with smtplib.SMTP(server_host, port, timeout=SMTP_TIMEOUT_SECONDS) as server:
-            if use_tls:
-                server.starttls()
-            server.login(username, password)
-            server.sendmail(sender, [to_email], msg.as_string())
+        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            status = getattr(response, "status", None)
+            if not isinstance(status, int):
+                status = response.getcode()
+            response.read()
+            response.close()
+
+        if status is None or status >= 400:
+            raise SMTPSendError(
+                f"Email delivery failed (provider HTTP {status})."
+            )
 
         logger.info(
-            "Email successfully dispatched via SMTP to %s (Subject: %s)",
-            to_email,
-            subject
+            "Email successfully dispatched via provider to %s (Subject: %s, HTTP %s)",
+            recipient,
+            subject,
+            status
         )
 
         return True
@@ -111,30 +158,55 @@ def _send_email(
     except SMTPConfigurationError:
         raise
 
-    except smtplib.SMTPException as e:
-        # Log only the exception class name: exception payloads must never
-        # leak MAIL_PASSWORD or any other credential.
+    except urllib.error.HTTPError as e:
+        # Log only the status code and provider error code: response payloads
+        # must never leak credentials, and provider messages stay out of logs.
+        provider_code = None
+        try:
+            error_body = e.read().decode("utf-8", "replace")
+            provider_code = json.loads(error_body).get("code")
+        except Exception:
+            provider_code = None
+
         logger.error(
-            "SMTP dispatch to %s failed: %s",
+            "Provider HTTP error during email dispatch to %s. Status=%s Code=%s",
+            to_email,
+            e.code,
+            provider_code or "unknown"
+        )
+
+        if e.code in (401, 403):
+            raise SMTPSendError(
+                "Email delivery failed: the provider rejected the server "
+                "credentials. Check BREVO_API_KEY in the Render environment."
+            )
+
+        raise SMTPSendError(
+            f"Email delivery failed (provider HTTP {e.code})."
+        )
+
+    except urllib.error.URLError as e:
+        # Covers DNS failures, refused connections and socket timeouts.
+        logger.error(
+            "Provider unreachable during email dispatch to %s. ErrorClass=%s",
             to_email,
             e.__class__.__name__
         )
 
         raise SMTPSendError(
-            "Email delivery failed via SMTP. Verify MAIL_USERNAME, "
-            "MAIL_PASSWORD (Gmail App Password), and network access to "
-            "the mail server."
+            "Email delivery failed: provider unreachable (timeout or "
+            "network error). Try again."
         )
 
     except Exception as e:
         logger.error(
-            "Unexpected error during email dispatch to %s: %s",
+            "Unexpected error during email dispatch to %s. ErrorClass=%s",
             to_email,
             e.__class__.__name__
         )
 
         raise SMTPSendError(
-            "Email delivery failed via SMTP: unexpected error."
+            "Email delivery failed: unexpected error."
         )
 
 
