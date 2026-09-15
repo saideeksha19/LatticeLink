@@ -4,6 +4,7 @@ import json
 import logging
 import urllib.request
 import urllib.error
+from html import escape
 
 logger = logging.getLogger("LatticeLink.EmailService")
 
@@ -110,6 +111,166 @@ def _validate_recipient(to_email: str) -> str:
     return recipient
 
 
+def _parse_resend_error(http_error: urllib.error.HTTPError) -> dict:
+    """
+    Safely extract what Resend actually returned for a failed request.
+
+    Returns {'status', 'name', 'message'} where 'message' is Resend's own
+    error text (or a sanitized snippet of a non-JSON/HTML error page, e.g.
+    Cloudflare's error 1010 block page). Any credential-like substrings are
+    stripped before anything is stored, logged, or returned, so no secret
+    can leak.
+    """
+    status = http_error.code
+
+    name = None
+    message = None
+
+    try:
+        raw = http_error.read().decode("utf-8", "replace")
+    except Exception:
+        raw = ""
+    finally:
+        try:
+            http_error.close()
+        except Exception:
+            pass
+
+    if raw:
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            parsed = None
+
+        if isinstance(parsed, dict):
+            name = parsed.get("name") or parsed.get("code") or parsed.get("type")
+            message = parsed.get("message")
+        else:
+            # Non-JSON body (e.g. Cloudflare/HTML error pages such as 1010).
+            name = "html_error_page"
+            message = raw.strip()
+    else:
+        reason = getattr(http_error, "reason", None)
+        message = str(reason) if reason else None
+        name = None
+
+    # Scrub anything that could resemble a credential before the text is
+    # ever logged or returned.
+    if isinstance(message, str) and message.strip():
+        message = message.strip()[:200]
+        lowered = message.lower()
+        for marker in ("bearer ", "re_", "authorization"):
+            idx = lowered.find(marker)
+            while idx != -1:
+                end = idx + len(marker)
+                while end < len(message) and message[end].isalnum():
+                    end += 1
+                message = message[:idx] + message[end:]
+                lowered = message.lower()
+                idx = lowered.find(marker)
+        message = message or None
+    else:
+        message = None
+
+    return {"status": status, "name": name, "message": message}
+
+
+def _map_resend_http_error(provider_error: dict) -> str:
+    """
+    Map a parsed Resend HTTP error to a safe, accurate operator-facing
+    message. 403 has multiple distinct causes (invalid key, sandbox-only
+    sending, unverified domain, Cloudflare 1010), so every case is mapped
+    explicitly instead of blaming the API key. Never includes secrets.
+    """
+    status = provider_error["status"]
+    name = (provider_error["name"] or "").lower()
+    message = (provider_error["message"] or "").lower()
+    combined = f"{name} {message}"
+
+    # Raw provider detail is appended only for JSON bodies; raw HTML error
+    # pages (1010 etc.) are never echoed back to clients.
+    if provider_error["name"] == "html_error_page":
+        detail = ""
+    else:
+        raw_message = provider_error["message"]
+        detail = f" (Resend: {escape(raw_message)})" if raw_message else ""
+
+    # Cloudflare error 1010: request blocked over missing/short User-Agent.
+    if "1010" in combined or "user-agent" in combined or "user agent" in combined:
+        return (
+            "Resend rejected the HTTP request because the required "
+            "User-Agent header is missing (error 1010)."
+        )
+
+    # Invalid key can arrive with 401 or 403 - map it by error name.
+    if "invalid_api_key" in combined or "invalid api key" in combined:
+        return (
+            "Resend API key is invalid. Replace RESEND_API_KEY in the "
+            f"Render environment with a valid key.{detail}"
+        )
+
+    if status == 401:
+        return (
+            "Resend API key is missing or unauthorized (HTTP 401). "
+            f"Check RESEND_API_KEY in the Render environment.{detail}"
+        )
+
+    if status == 403:
+        # Sandbox-only sending (free accounts without a verified domain can
+        # only email their own account address).
+        if (
+            "resend.dev" in combined
+            or "sandbox" in combined
+            or "testing emails" in combined
+            or ("only" in combined and "your own" in combined)
+        ):
+            return (
+                "Resend is still using the sandbox sender. A verified "
+                "sending domain is required for other recipients "
+                f"(Resend Dashboard -> Domains).{detail}"
+            )
+
+        # Unverified sending domain.
+        if "domain" in combined and (
+            "not verified" in combined
+            or "unverified" in combined
+            or "verify" in combined
+        ):
+            return (
+                "RESEND_FROM uses a domain that is not verified in Resend. "
+                "Verify the domain (Resend Dashboard -> Domains) or use an "
+                f"address on an already-verified domain.{detail}"
+            )
+
+        return (
+            "Resend refused this send (HTTP 403). Check RESEND_API_KEY, the "
+            "verified sending domain, and the RESEND_FROM address in the "
+            f"Render environment.{detail}"
+        )
+
+    if status == 422:
+        return (
+            "Email delivery rejected by Resend (HTTP 422). Ensure RESEND_FROM "
+            "is an address on a domain verified in your Resend account."
+            f"{detail}"
+        )
+
+    if status == 429:
+        return (
+            "Resend rate limit reached (HTTP 429). The free tier allows 100 "
+            "emails per day - wait and try again, or upgrade the Resend plan."
+            f"{detail}"
+        )
+
+    if status is not None and 500 <= status < 600:
+        return (
+            f"Temporary Resend provider error (HTTP {status}). "
+            f"Try again shortly.{detail}"
+        )
+
+    return f"Email delivery failed (provider HTTP {status}).{detail}"
+
+
 def _send_email(
     to_email: str,
     subject: str,
@@ -159,7 +320,7 @@ def _send_email(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "latticelink-backend",
+                "User-Agent": "LatticeLink/1.0",
             },
         )
 
@@ -195,39 +356,20 @@ def _send_email(
         raise
 
     except urllib.error.HTTPError as e:
-        # Log only the status code and provider error type: response payloads
-        # must never leak credentials, and provider messages stay out of logs.
-        provider_error_type = None
-        try:
-            error_body = e.read().decode("utf-8", "replace")
-            provider_error_type = json.loads(error_body).get("name")
-        except Exception:
-            provider_error_type = None
+        # Parse what Resend actually returned so every failure maps to an
+        # accurate, actionable message - never a blanket "bad credentials".
+        provider_error = _parse_resend_error(e)
 
+        # Log only scrubbed, secret-free fields.
         logger.error(
-            "Resend HTTP error during email dispatch to %s. Status=%s ErrorType=%s",
+            "Resend HTTP error during email dispatch to %s. Status=%s ErrorName=%s Detail=%s",
             to_email,
-            e.code,
-            provider_error_type or "unknown"
+            provider_error["status"],
+            provider_error["name"] or "unknown",
+            provider_error["message"] or "none"
         )
 
-        if e.code in (401, 403):
-            raise SMTPSendError(
-                "Email delivery failed: Resend rejected the server "
-                "credentials. Check RESEND_API_KEY in the Render environment."
-            )
-
-        if e.code == 422:
-            raise SMTPSendError(
-                "Email delivery rejected by Resend (HTTP 422). Ensure "
-                "RESEND_FROM is an address on a domain verified in your "
-                "Resend account; the sandbox sender can only deliver to "
-                "your own account email."
-            )
-
-        raise SMTPSendError(
-            f"Email delivery failed (provider HTTP {e.code})."
-        )
+        raise SMTPSendError(_map_resend_http_error(provider_error))
 
     except urllib.error.URLError as e:
         # Covers DNS failures, refused connections and connection timeouts.
