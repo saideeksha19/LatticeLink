@@ -92,24 +92,8 @@ class Config:
     # Session lifetime (1 hour)
     SESSION_TIMEOUT = int(os.getenv('SESSION_EXPIRY', 3600))
     
-    # Email Verification Settings (Gmail SMTP default)
-    MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
-    MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')
-    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-    MAIL_FROM = os.getenv('MAIL_FROM', '')
+    # Frontend URL included in OTP email footers
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-    
-    @classmethod
-    def is_smtp_configured(cls):
-        """Returns True only when a real remote SMTP host, username, and credentials are provided."""
-        server = (cls.MAIL_SERVER or '').strip().lower()
-        if not server or server in ('localhost', '127.0.0.1', 'none', ''):
-            return False
-        if not cls.MAIL_USERNAME or not cls.MAIL_PASSWORD:
-            return False
-        return True
     
     # Server settings
     HOST = os.getenv('HOST', '0.0.0.0')

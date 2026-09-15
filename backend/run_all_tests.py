@@ -6,10 +6,10 @@ os.environ['LATTICELINK_TEST_MODE'] = 'True'
 test_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'latticelink_test.db')
 os.environ['DATABASE_URL'] = f"sqlite:///{test_db_path.replace(os.sep, '/')}"
 
-# Dummy email provider configuration for tests. The provider HTTP call is
-# mocked below, so nothing is ever sent and no real key is required or used.
-os.environ.setdefault('BREVO_API_KEY', 'test-dummy-brevo-api-key')
-os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
+# Dummy Resend configuration for tests. The Resend HTTP call is mocked
+# below, so nothing is ever sent and no real key is required or used.
+os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
+os.environ.setdefault('RESEND_FROM', 'LatticeLink <latticelink.test.sender@yourdomain.com>')
 
 import unittest
 from unittest.mock import patch, MagicMock

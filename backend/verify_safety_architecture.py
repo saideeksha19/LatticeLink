@@ -8,10 +8,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Dummy email provider configuration for the sandboxed registration proof
-# below; the subprocess mocks the provider HTTP call, so nothing is dispatched.
-os.environ.setdefault('BREVO_API_KEY', 'test-dummy-brevo-api-key')
-os.environ.setdefault('MAIL_DEFAULT_SENDER', 'latticelink.test.sender@gmail.com')
+# Dummy Resend configuration for the sandboxed registration proof below;
+# the subprocess mocks the Resend HTTP call, so nothing is dispatched.
+os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
+os.environ.setdefault('RESEND_FROM', 'LatticeLink <latticelink.test.sender@yourdomain.com>')
 
 DEV_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink.db')
 TEST_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink_test.db')

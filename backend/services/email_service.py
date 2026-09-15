@@ -7,12 +7,13 @@ import urllib.error
 
 logger = logging.getLogger("LatticeLink.EmailService")
 
-BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+RESEND_API_URL = "https://api.resend.com/emails"
 HTTP_TIMEOUT_SECONDS = 20
-_SENDER_NAME = "LatticeLink"
 
 # Simple RFC-5322-style sanity check: local@domain.tld, no whitespace.
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Optional display-name form: 'LatticeLink <noreply@yourdomain.com>'
+_DISPLAY_NAME_PATTERN = re.compile(r"^(?P<name>[^<>]+)<(?P<addr>[^<>@\s]+@[^<>\s]+)>$")
 
 
 class SMTPConfigurationError(Exception):
@@ -25,48 +26,71 @@ class SMTPSendError(Exception):
     pass
 
 
-def _get_brevo_config():
+def _extract_email_address(sender_value: str) -> str:
     """
-    Read the email provider configuration from environment variables only.
+    Accept both plain addresses ('user@domain.com') and the display-name
+    form ('LatticeLink <user@domain.com>') and return the bare address
+    for validation.
+    """
+    value = (sender_value or "").strip()
+    match = _DISPLAY_NAME_PATTERN.match(value)
+    if match:
+        return match.group("addr").strip()
+    return value
+
+
+def _get_resend_config():
+    """
+    Read the Resend configuration from environment variables only.
 
     Required:
-        BREVO_API_KEY         -> Brevo API key (server-side only; never logged,
-                                 returned, or committed). Create it for free at
-                                 https://app.brevo.com (SMTP & API -> API keys).
+        RESEND_API_KEY -> Resend API key (server-side only; never logged,
+                          returned, or committed). Create it for free at
+                          https://dashboard.resend.com/api-keys.
 
-    Required (verified sender):
-        MAIL_DEFAULT_SENDER   -> the sender address shown to recipients; it must
-                                 be a sender verified in the Brevo account.
-                                 (Falls back to legacy MAIL_FROM if set.)
+        RESEND_FROM    -> the sender shown to recipients, either a plain
+                          address or a display-name form. It must belong to
+                          a domain verified in the Resend account (the
+                          shared onboarding@resend.dev sandbox sender can
+                          only deliver to your own account email).
 
-    Credentials are read at call time and are never logged, returned, or
-    embedded in error messages. No MAIL_USERNAME / MAIL_PASSWORD are needed.
+    Optional:
+        FRONTEND_URL   -> included as a link inside OTP emails when set.
+
+    The API key is read at call time and is never logged, returned, or
+    embedded in error messages. No SMTP credentials, mail passwords, or
+    username/password pairs are used anywhere — only the Resend API key.
     """
-    api_key = os.getenv("BREVO_API_KEY", "").strip()
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
 
     if not api_key:
         raise SMTPConfigurationError(
-            "BREVO_API_KEY is not configured. Add the Brevo API key to the "
+            "RESEND_API_KEY is not configured. Add the Resend API key to the "
             "Render environment variables (server-side only)."
         )
 
-    sender = (
-        os.getenv("MAIL_DEFAULT_SENDER", "").strip()
-        or os.getenv("MAIL_FROM", "").strip()
-    )
+    sender = os.getenv("RESEND_FROM", "").strip()
 
     if not sender:
         raise SMTPConfigurationError(
-            "MAIL_DEFAULT_SENDER is not configured. Set it to a sender "
-            "address verified in your Brevo account."
+            "RESEND_FROM is not configured. Set it to an address on a domain "
+            "verified in your Resend account, e.g. 'LatticeLink "
+            "<noreply@yourdomain.com>'."
         )
 
-    if "@" not in sender or not _EMAIL_PATTERN.match(sender):
+    sender_address = _extract_email_address(sender)
+    if not _EMAIL_PATTERN.match(sender_address):
         raise SMTPConfigurationError(
-            "MAIL_DEFAULT_SENDER must be a valid email address."
+            "RESEND_FROM must be a valid email address, optionally with a "
+            "display name, e.g. 'LatticeLink <noreply@yourdomain.com>'."
         )
 
     return api_key, sender
+
+
+def _get_frontend_url() -> str:
+    """Frontend URL used for the link inside OTP emails; empty when unset."""
+    return os.getenv("FRONTEND_URL", "").strip().rstrip("/")
 
 
 def _validate_recipient(to_email: str) -> str:
@@ -93,34 +117,46 @@ def _send_email(
     html_content: str
 ) -> bool:
     """
-    Send email through the Brevo transactional email API (free tier).
+    Send email through the Resend transactional email API (free tier).
 
-    The API key travels only in the request header of this server-to-server
-    call. It is never logged, returned to clients, or written to the database.
+    The API key travels only in the Authorization header of this
+    server-to-server call. It is never logged, returned to clients, or
+    written to the database.
     """
     try:
-        api_key, sender = _get_brevo_config()
+        api_key, sender = _get_resend_config()
         recipient = _validate_recipient(to_email)
+        frontend_url = _get_frontend_url()
+
+        if frontend_url:
+            text_content = (
+                f"{text_content}\n"
+                f"Open LatticeLink: {frontend_url}\n"
+            )
+            html_content = html_content.replace(
+                "</body>",
+                '<p style="text-align:center;margin:16px 0 0;font-size:12px;">'
+                f'<a href="{frontend_url}" style="color:#94a3b8;'
+                'text-decoration:none;">Open LatticeLink</a></p>\n</body>',
+                1
+            )
 
         payload = {
-            "sender": {
-                "name": _SENDER_NAME,
-                "email": sender,
-            },
-            "to": [{"email": recipient}],
+            "from": sender,
+            "to": [recipient],
             "subject": subject,
-            "textContent": text_content,
-            "htmlContent": html_content,
+            "text": text_content,
+            "html": html_content,
         }
 
         body = json.dumps(payload).encode("utf-8")
 
         request = urllib.request.Request(
-            BREVO_API_URL,
+            RESEND_API_URL,
             data=body,
             method="POST",
             headers={
-                "api-key": api_key,
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "User-Agent": "latticelink-backend",
@@ -128,7 +164,7 @@ def _send_email(
         )
 
         logger.info(
-            "Sending OTP email via provider. From=%s To=%s Subject=%s",
+            "Sending OTP email via Resend. From=%s To=%s Subject=%s",
             sender,
             recipient,
             subject
@@ -141,13 +177,13 @@ def _send_email(
             response.read()
             response.close()
 
-        if status is None or status >= 400:
+        if status is None or not (200 <= status < 400):
             raise SMTPSendError(
                 f"Email delivery failed (provider HTTP {status})."
             )
 
         logger.info(
-            "Email successfully dispatched via provider to %s (Subject: %s, HTTP %s)",
+            "Email successfully dispatched via Resend to %s (Subject: %s, HTTP %s)",
             recipient,
             subject,
             status
@@ -159,26 +195,34 @@ def _send_email(
         raise
 
     except urllib.error.HTTPError as e:
-        # Log only the status code and provider error code: response payloads
+        # Log only the status code and provider error type: response payloads
         # must never leak credentials, and provider messages stay out of logs.
-        provider_code = None
+        provider_error_type = None
         try:
             error_body = e.read().decode("utf-8", "replace")
-            provider_code = json.loads(error_body).get("code")
+            provider_error_type = json.loads(error_body).get("name")
         except Exception:
-            provider_code = None
+            provider_error_type = None
 
         logger.error(
-            "Provider HTTP error during email dispatch to %s. Status=%s Code=%s",
+            "Resend HTTP error during email dispatch to %s. Status=%s ErrorType=%s",
             to_email,
             e.code,
-            provider_code or "unknown"
+            provider_error_type or "unknown"
         )
 
         if e.code in (401, 403):
             raise SMTPSendError(
-                "Email delivery failed: the provider rejected the server "
-                "credentials. Check BREVO_API_KEY in the Render environment."
+                "Email delivery failed: Resend rejected the server "
+                "credentials. Check RESEND_API_KEY in the Render environment."
+            )
+
+        if e.code == 422:
+            raise SMTPSendError(
+                "Email delivery rejected by Resend (HTTP 422). Ensure "
+                "RESEND_FROM is an address on a domain verified in your "
+                "Resend account; the sandbox sender can only deliver to "
+                "your own account email."
             )
 
         raise SMTPSendError(
@@ -186,9 +230,23 @@ def _send_email(
         )
 
     except urllib.error.URLError as e:
-        # Covers DNS failures, refused connections and socket timeouts.
+        # Covers DNS failures, refused connections and connection timeouts.
         logger.error(
-            "Provider unreachable during email dispatch to %s. ErrorClass=%s",
+            "Resend unreachable during email dispatch to %s. ErrorClass=%s",
+            to_email,
+            e.__class__.__name__
+        )
+
+        raise SMTPSendError(
+            "Email delivery failed: provider unreachable (timeout or "
+            "network error). Try again."
+        )
+
+    except TimeoutError as e:
+        # Read timeouts can surface as a bare TimeoutError depending on the
+        # platform; never include the underlying detail (it may echo URLs).
+        logger.error(
+            "Resend timeout during email dispatch to %s. ErrorClass=%s",
             to_email,
             e.__class__.__name__
         )
