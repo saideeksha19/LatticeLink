@@ -8,13 +8,11 @@ from html import escape
 
 logger = logging.getLogger("LatticeLink.EmailService")
 
-RESEND_API_URL = "https://api.resend.com/emails"
+AGENTMAIL_API_URL_TEMPLATE = "https://api.agentmail.to/v0/inboxes/{inbox_id}/messages/send"
 HTTP_TIMEOUT_SECONDS = 20
 
 # Simple RFC-5322-style sanity check: local@domain.tld, no whitespace.
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-# Optional display-name form: 'LatticeLink <noreply@yourdomain.com>'
-_DISPLAY_NAME_PATTERN = re.compile(r"^(?P<name>[^<>]+)<(?P<addr>[^<>@\s]+@[^<>\s]+)>$")
 
 
 class SMTPConfigurationError(Exception):
@@ -27,66 +25,44 @@ class SMTPSendError(Exception):
     pass
 
 
-def _extract_email_address(sender_value: str) -> str:
+def _get_agentmail_config():
     """
-    Accept both plain addresses ('user@domain.com') and the display-name
-    form ('LatticeLink <user@domain.com>') and return the bare address
-    for validation.
-    """
-    value = (sender_value or "").strip()
-    match = _DISPLAY_NAME_PATTERN.match(value)
-    if match:
-        return match.group("addr").strip()
-    return value
-
-
-def _get_resend_config():
-    """
-    Read the Resend configuration from environment variables only.
+    Read the AgentMail configuration from environment variables only.
 
     Required:
-        RESEND_API_KEY -> Resend API key (server-side only; never logged,
-                          returned, or committed). Create it for free at
-                          https://dashboard.resend.com/api-keys.
+        AGENTMAIL_API_KEY   -> AgentMail server API key (server-side only;
+                               never logged, returned, or committed). Create
+                               it in the AgentMail Console after completing
+                               the one-time human account verification, which
+                               unlocks sending to external recipients.
 
-        RESEND_FROM    -> the sender shown to recipients, either a plain
-                          address or a display-name form. It must belong to
-                          a domain verified in the Resend account (the
-                          shared onboarding@resend.dev sandbox sender can
-                          only deliver to your own account email).
+        AGENTMAIL_INBOX_ID  -> the ID of the single free @agentmail.to inbox
+                               used as the SENDER for all LatticeLink OTP
+                               emails. Recipients are arbitrary external
+                               addresses (gmail.com, yahoo.com, etc.); no
+                               custom domain is required.
 
-    Optional:
-        FRONTEND_URL   -> included as a link inside OTP emails when set.
-
-    The API key is read at call time and is never logged, returned, or
-    embedded in error messages. No SMTP credentials, mail passwords, or
-    username/password pairs are used anywhere — only the Resend API key.
+    The API key and inbox ID are read at call time. The key is never
+    logged, returned, or embedded in error messages. No SMTP credentials,
+    mail passwords, or username/password pairs are used anywhere.
     """
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    api_key = os.getenv("AGENTMAIL_API_KEY", "").strip()
 
     if not api_key:
         raise SMTPConfigurationError(
-            "RESEND_API_KEY is not configured. Add the Resend API key to the "
-            "Render environment variables (server-side only)."
+            "AGENTMAIL_API_KEY is not configured. Add the AgentMail API key "
+            "to the Render environment variables (server-side only)."
         )
 
-    sender = os.getenv("RESEND_FROM", "").strip()
+    inbox_id = os.getenv("AGENTMAIL_INBOX_ID", "").strip()
 
-    if not sender:
+    if not inbox_id:
         raise SMTPConfigurationError(
-            "RESEND_FROM is not configured. Set it to an address on a domain "
-            "verified in your Resend account, e.g. 'LatticeLink "
-            "<noreply@yourdomain.com>'."
+            "AGENTMAIL_INBOX_ID is not configured. Set it to the ID of the "
+            "AgentMail inbox used as the OTP sender."
         )
 
-    sender_address = _extract_email_address(sender)
-    if not _EMAIL_PATTERN.match(sender_address):
-        raise SMTPConfigurationError(
-            "RESEND_FROM must be a valid email address, optionally with a "
-            "display name, e.g. 'LatticeLink <noreply@yourdomain.com>'."
-        )
-
-    return api_key, sender
+    return api_key, inbox_id
 
 
 def _get_frontend_url() -> str:
@@ -111,15 +87,14 @@ def _validate_recipient(to_email: str) -> str:
     return recipient
 
 
-def _parse_resend_error(http_error: urllib.error.HTTPError) -> dict:
+def _parse_agentmail_error(http_error: urllib.error.HTTPError) -> dict:
     """
-    Safely extract what Resend actually returned for a failed request.
+    Safely extract what AgentMail actually returned for a failed request.
 
-    Returns {'status', 'name', 'message'} where 'message' is Resend's own
-    error text (or a sanitized snippet of a non-JSON/HTML error page, e.g.
-    Cloudflare's error 1010 block page). Any credential-like substrings are
-    stripped before anything is stored, logged, or returned, so no secret
-    can leak.
+    Returns {'status', 'name', 'message'}. The message is AgentMail's own
+    error text (or a sanitized snippet of a non-JSON error page). Any
+    credential-like substrings are stripped before anything is stored,
+    logged, or returned, so no secret can leak.
     """
     status = http_error.code
 
@@ -143,10 +118,10 @@ def _parse_resend_error(http_error: urllib.error.HTTPError) -> dict:
             parsed = None
 
         if isinstance(parsed, dict):
-            name = parsed.get("name") or parsed.get("code") or parsed.get("type")
-            message = parsed.get("message")
+            name = parsed.get("name") or parsed.get("code") or parsed.get("type") or parsed.get("error")
+            message = parsed.get("message") or parsed.get("error_description")
         else:
-            # Non-JSON body (e.g. Cloudflare/HTML error pages such as 1010).
+            # Non-JSON body (e.g. HTML error pages).
             name = "html_error_page"
             message = raw.strip()
     else:
@@ -159,11 +134,11 @@ def _parse_resend_error(http_error: urllib.error.HTTPError) -> dict:
     if isinstance(message, str) and message.strip():
         message = message.strip()[:200]
         lowered = message.lower()
-        for marker in ("bearer ", "re_", "authorization"):
+        for marker in ("bearer ", "am_", "authorization"):
             idx = lowered.find(marker)
             while idx != -1:
                 end = idx + len(marker)
-                while end < len(message) and message[end].isalnum():
+                while end < len(message) and message[end].isalnum() or (end < len(message) and message[end] in "-_"):
                     end += 1
                 message = message[:idx] + message[end:]
                 lowered = message.lower()
@@ -175,12 +150,11 @@ def _parse_resend_error(http_error: urllib.error.HTTPError) -> dict:
     return {"status": status, "name": name, "message": message}
 
 
-def _map_resend_http_error(provider_error: dict) -> str:
+def _map_agentmail_http_error(provider_error: dict) -> str:
     """
-    Map a parsed Resend HTTP error to a safe, accurate operator-facing
-    message. 403 has multiple distinct causes (invalid key, sandbox-only
-    sending, unverified domain, Cloudflare 1010), so every case is mapped
-    explicitly instead of blaming the API key. Never includes secrets.
+    Map a parsed AgentMail HTTP error to a safe, accurate operator-facing
+    message. Never includes secrets; never blames the API key when the
+    cause is elsewhere.
     """
     status = provider_error["status"]
     name = (provider_error["name"] or "").lower()
@@ -188,83 +162,76 @@ def _map_resend_http_error(provider_error: dict) -> str:
     combined = f"{name} {message}"
 
     # Raw provider detail is appended only for JSON bodies; raw HTML error
-    # pages (1010 etc.) are never echoed back to clients.
+    # pages are never echoed back to clients.
     if provider_error["name"] == "html_error_page":
         detail = ""
     else:
         raw_message = provider_error["message"]
-        detail = f" (Resend: {escape(raw_message)})" if raw_message else ""
+        detail = f" (AgentMail: {escape(raw_message)})" if raw_message else ""
 
-    # Cloudflare error 1010: request blocked over missing/short User-Agent.
-    if "1010" in combined or "user-agent" in combined or "user agent" in combined:
+    if status == 400:
         return (
-            "Resend rejected the HTTP request because the required "
-            "User-Agent header is missing (error 1010)."
-        )
-
-    # Invalid key can arrive with 401 or 403 - map it by error name.
-    if "invalid_api_key" in combined or "invalid api key" in combined:
-        return (
-            "Resend API key is invalid. Replace RESEND_API_KEY in the "
-            f"Render environment with a valid key.{detail}"
+            "AgentMail rejected the request as invalid (HTTP 400). Verify "
+            f"the recipient address and try again.{detail}"
         )
 
     if status == 401:
         return (
-            "Resend API key is missing or unauthorized (HTTP 401). "
-            f"Check RESEND_API_KEY in the Render environment.{detail}"
+            "AgentMail API key is missing or unauthorized (HTTP 401). "
+            f"Check AGENTMAIL_API_KEY in the Render environment.{detail}"
         )
 
     if status == 403:
-        # Sandbox-only sending (free accounts without a verified domain can
-        # only email their own account address).
+        # The dominant free-plan cause: the one-time account verification
+        # has not been completed, so external recipients are locked.
         if (
-            "resend.dev" in combined
-            or "sandbox" in combined
-            or "testing emails" in combined
-            or ("only" in combined and "your own" in combined)
+            "verif" in combined
+            or "external" in combined
+            or "permission" in combined
+            or "account" in combined
+            or "restricted" in combined
         ):
             return (
-                "Resend is still using the sandbox sender. A verified "
-                "sending domain is required for other recipients "
-                f"(Resend Dashboard -> Domains).{detail}"
+                "AgentMail cannot send to external recipients (HTTP 403). "
+                "Complete the one-time AgentMail account verification in "
+                f"the AgentMail console, then retry.{detail}"
             )
-
-        # Unverified sending domain.
-        if "domain" in combined and (
-            "not verified" in combined
-            or "unverified" in combined
-            or "verify" in combined
-        ):
-            return (
-                "RESEND_FROM uses a domain that is not verified in Resend. "
-                "Verify the domain (Resend Dashboard -> Domains) or use an "
-                f"address on an already-verified domain.{detail}"
-            )
-
         return (
-            "Resend refused this send (HTTP 403). Check RESEND_API_KEY, the "
-            "verified sending domain, and the RESEND_FROM address in the "
-            f"Render environment.{detail}"
+            "AgentMail refused this send (HTTP 403). Check AGENTMAIL_API_KEY "
+            "and account verification status in the AgentMail console."
+            f"{detail}"
         )
 
-    if status == 422:
+    if status == 404:
+        # Most often a wrong AGENTMAIL_INBOX_ID: the sender inbox does not
+        # exist for this API key.
+        if "inbox" in combined or "not_found" in combined or "not found" in combined:
+            return (
+                "AgentMail inbox not found (HTTP 404). Check that "
+                "AGENTMAIL_INBOX_ID matches an inbox owned by this AgentMail "
+                f"account.{detail}"
+            )
         return (
-            "Email delivery rejected by Resend (HTTP 422). Ensure RESEND_FROM "
-            "is an address on a domain verified in your Resend account."
-            f"{detail}"
+            "AgentMail endpoint or inbox not found (HTTP 404). Verify "
+            f"AGENTMAIL_INBOX_ID and the current API documentation.{detail}"
+        )
+
+    if status == 409:
+        return (
+            "AgentMail reported a conflict (HTTP 409). The send may already "
+            "be in progress - check the inbox in the AgentMail console "
+            f"before retrying.{detail}"
         )
 
     if status == 429:
         return (
-            "Resend rate limit reached (HTTP 429). The free tier allows 100 "
-            "emails per day - wait and try again, or upgrade the Resend plan."
-            f"{detail}"
+            "AgentMail rate limit reached (HTTP 429). The free plan allows "
+            f"100 emails per day / 3000 per month - wait and try again.{detail}"
         )
 
     if status is not None and 500 <= status < 600:
         return (
-            f"Temporary Resend provider error (HTTP {status}). "
+            f"Temporary AgentMail provider error (HTTP {status}). "
             f"Try again shortly.{detail}"
         )
 
@@ -278,14 +245,20 @@ def _send_email(
     html_content: str
 ) -> bool:
     """
-    Send email through the Resend transactional email API (free tier).
+    Send email through the AgentMail REST API
+    (POST /v0/inboxes/{inbox_id}/messages/send).
 
     The API key travels only in the Authorization header of this
     server-to-server call. It is never logged, returned to clients, or
-    written to the database.
+    written to the database. The sender is the single free @agentmail.to
+    inbox identified by AGENTMAIL_INBOX_ID (no custom domain required);
+    recipients may be arbitrary external addresses.
+
+    Returns True only when AgentMail ACCEPTS the message (HTTP 200 with a
+    message_id), which is the documented success contract.
     """
     try:
-        api_key, sender = _get_resend_config()
+        api_key, inbox_id = _get_agentmail_config()
         recipient = _validate_recipient(to_email)
         frontend_url = _get_frontend_url()
 
@@ -303,7 +276,6 @@ def _send_email(
             )
 
         payload = {
-            "from": sender,
             "to": [recipient],
             "subject": subject,
             "text": text_content,
@@ -313,7 +285,7 @@ def _send_email(
         body = json.dumps(payload).encode("utf-8")
 
         request = urllib.request.Request(
-            RESEND_API_URL,
+            AGENTMAIL_API_URL_TEMPLATE.format(inbox_id=inbox_id),
             data=body,
             method="POST",
             headers={
@@ -324,9 +296,10 @@ def _send_email(
             },
         )
 
+        # Log the recipient and subject only - never the API key, the inbox
+        # ID is not a secret but is also not needed in logs, and never the OTP.
         logger.info(
-            "Sending OTP email via Resend. From=%s To=%s Subject=%s",
-            sender,
+            "Sending OTP email via AgentMail. To=%s Subject=%s",
             recipient,
             subject
         )
@@ -338,16 +311,16 @@ def _send_email(
             response.read()
             response.close()
 
-        if status is None or not (200 <= status < 400):
+        if status is None or not (200 <= status < 300):
             raise SMTPSendError(
                 f"Email delivery failed (provider HTTP {status})."
             )
 
         logger.info(
-            "Email successfully dispatched via Resend to %s (Subject: %s, HTTP %s)",
+            "Email accepted by AgentMail (HTTP %s) to %s (Subject: %s)",
+            status,
             recipient,
-            subject,
-            status
+            subject
         )
 
         return True
@@ -356,25 +329,25 @@ def _send_email(
         raise
 
     except urllib.error.HTTPError as e:
-        # Parse what Resend actually returned so every failure maps to an
-        # accurate, actionable message - never a blanket "bad credentials".
-        provider_error = _parse_resend_error(e)
+        # Parse what AgentMail actually returned so every failure maps to
+        # an accurate, actionable message - never a blanket "bad credentials".
+        provider_error = _parse_agentmail_error(e)
 
         # Log only scrubbed, secret-free fields.
         logger.error(
-            "Resend HTTP error during email dispatch to %s. Status=%s ErrorName=%s Detail=%s",
+            "AgentMail HTTP error during email dispatch to %s. Status=%s ErrorName=%s Detail=%s",
             to_email,
             provider_error["status"],
             provider_error["name"] or "unknown",
             provider_error["message"] or "none"
         )
 
-        raise SMTPSendError(_map_resend_http_error(provider_error))
+        raise SMTPSendError(_map_agentmail_http_error(provider_error))
 
     except urllib.error.URLError as e:
         # Covers DNS failures, refused connections and connection timeouts.
         logger.error(
-            "Resend unreachable during email dispatch to %s. ErrorClass=%s",
+            "AgentMail unreachable during email dispatch to %s. ErrorClass=%s",
             to_email,
             e.__class__.__name__
         )
@@ -388,7 +361,7 @@ def _send_email(
         # Read timeouts can surface as a bare TimeoutError depending on the
         # platform; never include the underlying detail (it may echo URLs).
         logger.error(
-            "Resend timeout during email dispatch to %s. ErrorClass=%s",
+            "AgentMail timeout during email dispatch to %s. ErrorClass=%s",
             to_email,
             e.__class__.__name__
         )

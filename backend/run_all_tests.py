@@ -6,10 +6,10 @@ os.environ['LATTICELINK_TEST_MODE'] = 'True'
 test_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'latticelink_test.db')
 os.environ['DATABASE_URL'] = f"sqlite:///{test_db_path.replace(os.sep, '/')}"
 
-# Dummy Resend configuration for tests. The Resend HTTP call is mocked
-# below, so nothing is ever sent and no real key is required or used.
-os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
-os.environ.setdefault('RESEND_FROM', 'LatticeLink <latticelink.test.sender@yourdomain.com>')
+# Dummy AgentMail configuration for tests. The AgentMail HTTP call is
+# mocked below, so nothing is ever sent and no real key is required or used.
+os.environ.setdefault('AGENTMAIL_API_KEY', 'test-dummy-agentmail-api-key')
+os.environ.setdefault('AGENTMAIL_INBOX_ID', 'test-inbox-id')
 
 import unittest
 from unittest.mock import patch, MagicMock
@@ -17,9 +17,9 @@ from unittest.mock import patch, MagicMock
 # Mock out external network calls to the email provider so tests run instantly,
 # deterministically, and without consuming quota.
 _provider_response = MagicMock()
-_provider_response.status = 201
-_provider_response.getcode.return_value = 201
-_provider_response.read.return_value = b'{"messageId": "test-message-id"}'
+_provider_response.status = 200
+_provider_response.getcode.return_value = 200
+_provider_response.read.return_value = b'{"message_id": "test-message-id", "thread_id": "test-thread-id"}'
 _provider_response.close.return_value = None
 
 _provider_urlopen = MagicMock(return_value=_provider_response)

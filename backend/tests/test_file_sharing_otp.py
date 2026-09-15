@@ -51,8 +51,8 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
         """When the email provider is not configured, registration fails with clear configuration error (HTTP 503)."""
         from unittest.mock import patch
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop('RESEND_API_KEY', None)
-            os.environ.pop('RESEND_FROM', None)
+            os.environ.pop('AGENTMAIL_API_KEY', None)
+            os.environ.pop('AGENTMAIL_INBOX_ID', None)
             res = self.client.post('/api/auth/register', json={
                 'username': 'nosmtp_user',
                 'email': 'nosmtp@example.com',
@@ -60,7 +60,7 @@ class TestFileSharingAndEmailOTP(unittest.TestCase):
             })
             self.assertEqual(res.status_code, 503)
             data = res.get_json()
-            self.assertIn('RESEND_API_KEY is not configured', data.get('error', ''))
+            self.assertIn('AGENTMAIL_API_KEY is not configured', data.get('error', ''))
             self.assertNotIn('dev_otp', data)
             self.assertNotIn('otp', data)
 

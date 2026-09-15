@@ -8,10 +8,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# Dummy Resend configuration for the sandboxed registration proof below;
-# the subprocess mocks the Resend HTTP call, so nothing is dispatched.
-os.environ.setdefault('RESEND_API_KEY', 'test-dummy-resend-api-key')
-os.environ.setdefault('RESEND_FROM', 'LatticeLink <latticelink.test.sender@yourdomain.com>')
+# Dummy AgentMail configuration for the sandboxed registration proof below;
+# the subprocess mocks the AgentMail HTTP call, so nothing is dispatched.
+os.environ.setdefault('AGENTMAIL_API_KEY', 'test-dummy-agentmail-api-key')
+os.environ.setdefault('AGENTMAIL_INBOX_ID', 'test-inbox-id')
 
 DEV_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink.db')
 TEST_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink_test.db')
@@ -156,7 +156,7 @@ class TestDatabaseSafetyArchitecture(unittest.TestCase):
             "with app.app_context():\n"
             "    db.create_all()\n"
             "from unittest.mock import patch, MagicMock\n"
-            "_resp = MagicMock(); _resp.status = 201; _resp.getcode.return_value = 201; _resp.read.return_value = b'{}'; _resp.close.return_value = None\n"
+            "_resp = MagicMock(); _resp.status = 200; _resp.getcode.return_value = 200; _resp.read.return_value = b'{}'; _resp.close.return_value = None\n"
             "_u = MagicMock(return_value=_resp); _u.return_value.__enter__.return_value = _resp; _u.return_value.__exit__.return_value = False\n"
             "client = app.test_client()\n"
             "with patch('services.email_service.urllib.request.urlopen', _u):\n"

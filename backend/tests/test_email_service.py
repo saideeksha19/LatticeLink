@@ -1,18 +1,22 @@
 """
-Unit tests for the Resend-API email service.
+Unit tests for the AgentMail-API email service.
 
-These tests mock the Resend HTTP layer entirely: no network calls are made
-and no real API key is used. They verify that:
+These tests mock the AgentMail HTTP layer entirely: no network calls are
+made and no real API key is used. They verify that:
   - verification and password-reset OTPs are dispatched to the RECIPIENT
     email passed in (dynamic per-user delivery)
-  - the request contract matches Resend (URL, Authorization: Bearer,
-    Content-Type, and the explicit User-Agent header)
-  - RESEND_API_KEY and RESEND_FROM are sourced from the environment only,
-    and the API key never appears in logs, payloads, or error messages
+  - the request contract matches the documented AgentMail API
+    (POST /v0/inboxes/{inbox_id}/messages/send, Bearer auth, JSON body with
+    to/subject/text/html, explicit User-Agent)
+  - AGENTMAIL_API_KEY and AGENTMAIL_INBOX_ID are sourced from the
+    environment only, and the API key never appears in logs, payloads,
+    or error messages
   - missing configuration raises SMTPConfigurationError (HTTP 503 path)
-  - provider errors are mapped ACCURATELY (invalid key vs sandbox-only
-    sending vs unverified domain vs Cloudflare 1010 vs rate limit vs 5xx)
-    instead of blaming the API key for every failure
+  - provider errors are mapped accurately (invalid key, unverified account
+    blocking external recipients, unknown inbox, conflicts, rate limits,
+    5xx) instead of hiding the real cause
+  - success is returned ONLY when AgentMail actually accepts the message
+    (HTTP 200 with message_id)
   - invalid recipients are rejected before any API call
 """
 import os
@@ -37,14 +41,14 @@ from services.email_service import (
 )
 
 TEST_ENV = {
-    'RESEND_API_KEY': 'test-dummy-resend-api-key',
-    'RESEND_FROM': 'LatticeLink <latticelink.test.sender@yourdomain.com>',
+    'AGENTMAIL_API_KEY': 'test-dummy-agentmail-api-key',
+    'AGENTMAIL_INBOX_ID': 'test-inbox-id-123',
 }
 
-RESEND_URL = 'https://api.resend.com/emails'
+AGENTMAIL_URL = 'https://api.agentmail.to/v0/inboxes/test-inbox-id-123/messages/send'
 
 
-def _make_urlopen_mock(status=200, body=b'{"id": "test-message-id"}'):
+def _make_urlopen_mock(status=200, body=b'{"message_id": "test-message-id", "thread_id": "test-thread-id"}'):
     """Build a mock for urllib.request.urlopen returning a response-like object.
 
     Mirrors the real urlopen contract: the object returned by the call is a
@@ -63,35 +67,43 @@ def _make_urlopen_mock(status=200, body=b'{"id": "test-message-id"}'):
 def _http_error(status, reason, body: bytes):
     """Build a real urllib.error.HTTPError like the one urlopen raises."""
     return urllib.error.HTTPError(
-        RESEND_URL, status, reason, {}, io.BytesIO(body)
+        AGENTMAIL_URL, status, reason, {}, io.BytesIO(body)
     )
 
 
-def _assert_error(self, ctx, expected_fragments):
-    """Shared assertions: accurate message, no key material anywhere."""
+def _assert_no_secrets(self, ctx):
+    """The raised error must never contain key material."""
     text = str(ctx.exception)
-    for fragment in expected_fragments:
-        self.assertIn(fragment, text)
-    self.assertNotIn(TEST_ENV['RESEND_API_KEY'], text)
-    self.assertNotIn('test-dummy-resend-api-key', text)
+    self.assertNotIn(TEST_ENV['AGENTMAIL_API_KEY'], text)
+    self.assertNotIn('test-dummy-agentmail-api-key', text)
     self.assertNotIn('Bearer ', text)
+    self.assertNotIn('am_', text.replace('AgentMail', ''))
 
 
-class TestResendEmailService(unittest.TestCase):
+class TestAgentMailEmailService(unittest.TestCase):
     # ---------------------------------------------------------------
-    # Successful dispatch / dynamic recipients / request contract
+    # Successful dispatch / dynamic recipients
     # ---------------------------------------------------------------
-    def test_verification_otp_sent_to_dynamic_recipient(self):
+    def test_otp_sent_to_user_a_gmail(self):
         urlopen = _make_urlopen_mock()
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
-                self.assertTrue(send_verification_otp('userA@example.com', 'alice', '123456'))
-                self.assertTrue(send_verification_otp('userB@yahoo.com', 'bob', '654321'))
+                self.assertTrue(send_verification_otp('userA@gmail.com', 'alice', '123456'))
 
-        self.assertEqual(urlopen.call_count, 2)
-        first_req, second_req = urlopen.call_args_list[0][0][0], urlopen.call_args_list[1][0][0]
-        self.assertEqual(json.loads(first_req.data.decode('utf-8'))['to'], ['userA@example.com'])
-        self.assertEqual(json.loads(second_req.data.decode('utf-8'))['to'], ['userB@yahoo.com'])
+        payload = json.loads(urlopen.call_args[0][0].data.decode('utf-8'))
+        self.assertEqual(payload['to'], ['userA@gmail.com'])
+        self.assertIn('123456', payload['text'])
+        self.assertIn('123456', payload['html'])
+
+    def test_otp_sent_to_user_b_gmail(self):
+        """Second user, same backend: recipient must be B's own address."""
+        urlopen = _make_urlopen_mock()
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                self.assertTrue(send_verification_otp('userB@gmail.com', 'bob', '654321'))
+
+        payload = json.loads(urlopen.call_args[0][0].data.decode('utf-8'))
+        self.assertEqual(payload['to'], ['userB@gmail.com'])
 
     def test_password_reset_otp_sent_to_recipient(self):
         urlopen = _make_urlopen_mock()
@@ -104,175 +116,181 @@ class TestResendEmailService(unittest.TestCase):
         self.assertIn('246810', payload['text'])
         self.assertIn('Password Reset', payload['subject'])
 
-    def test_request_contract_matches_resend_api(self):
-        """Headers must include Bearer auth, JSON content type, and the
-        explicit User-Agent that Resend/Cloudflare require."""
+    def test_success_returns_true_only_on_agentmail_acceptance(self):
+        """True is returned ONLY on a documented 200 acceptance."""
+        urlopen = _make_urlopen_mock(status=200)
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                self.assertTrue(_send_email('user@example.com', 'S', 't', '<p>h</p>'))
+
+    def test_request_contract_matches_agentmail_api(self):
+        """URL (with inbox id), Bearer auth, JSON body, User-Agent."""
         urlopen = _make_urlopen_mock()
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
-                send_verification_otp('userA@example.com', 'alice', '123456')
+                send_verification_otp('userA@gmail.com', 'alice', '123456')
 
         req = urlopen.call_args[0][0]
-        self.assertEqual(req.full_url, RESEND_URL)
+        self.assertEqual(req.full_url, AGENTMAIL_URL)
         self.assertEqual(req.get_method(), 'POST')
-        self.assertEqual(req.headers.get('Authorization'), 'Bearer test-dummy-resend-api-key')
+        self.assertEqual(req.headers.get('Authorization'), 'Bearer test-dummy-agentmail-api-key')
         self.assertEqual(req.headers.get('Content-type'), 'application/json')
         self.assertEqual(req.headers.get('User-agent'), 'LatticeLink/1.0')
         # API key must NOT appear anywhere in the JSON payload
-        self.assertNotIn(TEST_ENV['RESEND_API_KEY'], req.data.decode('utf-8'))
+        self.assertNotIn(TEST_ENV['AGENTMAIL_API_KEY'], req.data.decode('utf-8'))
 
         payload = json.loads(req.data.decode('utf-8'))
-        self.assertEqual(payload['from'], TEST_ENV['RESEND_FROM'])
-        self.assertIn('123456', payload['text'])
-        self.assertIn('123456', payload['html'])
+        self.assertEqual(set(payload.keys()), {'to', 'subject', 'text', 'html'})
+        self.assertEqual(payload['to'], ['userA@gmail.com'])
 
     # ---------------------------------------------------------------
     # Configuration errors (HTTP 503 path)
     # ---------------------------------------------------------------
     def test_missing_api_key_raises_configuration_error(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop('RESEND_API_KEY', None)
+            os.environ.pop('AGENTMAIL_API_KEY', None)
+            os.environ.pop('AGENTMAIL_INBOX_ID', None)
             urlopen = _make_urlopen_mock()
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPConfigurationError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        self.assertIn('RESEND_API_KEY is not configured', str(ctx.exception))
+        self.assertIn('AGENTMAIL_API_KEY is not configured', str(ctx.exception))
         urlopen.assert_not_called()
 
-    def test_missing_sender_raises_configuration_error(self):
-        with patch.dict(os.environ, {'RESEND_API_KEY': 'test-dummy-resend-api-key'}, clear=False):
-            os.environ.pop('RESEND_FROM', None)
+    def test_missing_inbox_id_raises_configuration_error(self):
+        with patch.dict(os.environ, {'AGENTMAIL_API_KEY': 'test-dummy-agentmail-api-key'}, clear=False):
+            os.environ.pop('AGENTMAIL_INBOX_ID', None)
             urlopen = _make_urlopen_mock()
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPConfigurationError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        self.assertIn('RESEND_FROM is not configured', str(ctx.exception))
-        urlopen.assert_not_called()
-
-    def test_invalid_sender_raises_configuration_error(self):
-        with patch.dict(os.environ, {
-            'RESEND_API_KEY': 'test-dummy-resend-api-key',
-            'RESEND_FROM': 'not-an-email-address',
-        }, clear=False):
-            urlopen = _make_urlopen_mock()
-            with patch('services.email_service.urllib.request.urlopen', urlopen):
-                with self.assertRaises(SMTPConfigurationError):
-                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
+        self.assertIn('AGENTMAIL_INBOX_ID is not configured', str(ctx.exception))
         urlopen.assert_not_called()
 
     # ---------------------------------------------------------------
     # Accurate provider error mapping
     # ---------------------------------------------------------------
-    def test_invalid_api_key_response(self):
-        """Resend reports an invalid key by name - must not be confused
-        with a 403 domain/sandbox problem."""
+    def test_400_validation_error(self):
         urlopen = MagicMock(side_effect=_http_error(
-            403, 'Forbidden',
-            b'{"name": "invalid_api_key", "message": "The API key provided is invalid."}'
+            400, 'Bad Request',
+            b'{"name": "validation_error", "message": "Invalid field.", "code": "invalid_request"}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['Resend API key is invalid', 'RESEND_API_KEY'])
+        self.assertIn('HTTP 400', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
-    def test_403_sandbox_recipient_restriction_response(self):
-        """Free Resend accounts without a verified domain may only send to
-        their own account address - the message must say so."""
+    def test_403_external_recipient_verification_error(self):
+        """Unverified AgentMail accounts cannot email external recipients -
+        the message must point at account verification, not the API key."""
         urlopen = MagicMock(side_effect=_http_error(
             403, 'Forbidden',
-            b'{"name": "validation_error", "message": "You can only send testing emails to your own email address (user@resend.dev) until you verify a domain."}'
+            b'{"name": "message_rejected", "code": "missing_permission", '
+            b'"message": "Account is not verified. External recipients are restricted.", '
+            b'"fix": "Complete account verification in the AgentMail console."}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('other.user@gmail.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['sandbox sender', 'verified sending domain'])
+        text = str(ctx.exception)
+        self.assertIn('external recipients', text)
+        self.assertIn('account verification', text)
+        self.assertIn('one-time', text)
+        self.assertIn('AgentMail console', text)
+        _assert_no_secrets(self, ctx)
 
-    def test_403_unverified_domain_response(self):
+    def test_403_generic_response(self):
         urlopen = MagicMock(side_effect=_http_error(
-            403, 'Forbidden',
-            b'{"name": "validation_error", "message": "The from address you specified (latticelink.test.sender@yourdomain.com) is not verified."}'
+            403, 'Forbidden', b'{"name": "forbidden"}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['not verified in Resend', 'Domains'])
+        self.assertIn('HTTP 403', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
-    def test_403_code_1010_user_agent_response(self):
-        """Cloudflare error 1010 arrives as an HTML block page with no JSON;
-        the message must name the missing User-Agent, not the credentials."""
-        html_block_page = (
-            b'<html><head><title>Error 1010 Ray ID: 8f</title></head>'
-            b'<body><h1>Error 1010</h1><p>The owner of this website has banned '
-            b'your access based on your browser\'s signature.</p></body></html>'
-        )
-        urlopen = MagicMock(side_effect=_http_error(403, 'Forbidden', html_block_page))
-        with patch.dict(os.environ, TEST_ENV, clear=False):
-            with patch('services.email_service.urllib.request.urlopen', urlopen):
-                with self.assertRaises(SMTPSendError) as ctx:
-                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['User-Agent header is missing', '1010'])
-        # The raw HTML page must never be echoed back
-        self.assertNotIn('<html>', str(ctx.exception))
-
-    def test_401_response(self):
+    def test_404_inbox_not_found_response(self):
         urlopen = MagicMock(side_effect=_http_error(
-            401, 'Unauthorized',
-            b'{"name": "validation_error", "message": "Missing Authorization header."}'
+            404, 'Not Found',
+            b'{"name": "not_found", "code": "not_found", "message": "Inbox not found."}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['missing or unauthorized', 'HTTP 401'])
+        text = str(ctx.exception)
+        self.assertIn('inbox not found', text.lower())
+        self.assertIn('AGENTMAIL_INBOX_ID', text)
+        _assert_no_secrets(self, ctx)
+
+    def test_409_conflict_response(self):
+        urlopen = MagicMock(side_effect=_http_error(
+            409, 'Conflict',
+            b'{"name": "conflict", "code": "conflict", "message": "Duplicate send in progress."}'
+        ))
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPSendError) as ctx:
+                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
+        self.assertIn('HTTP 409', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
     def test_429_rate_limit_response(self):
         urlopen = MagicMock(side_effect=_http_error(
             429, 'Too Many Requests',
-            b'{"name": "rate_limit_exceeded", "message": "Too many requests."}'
+            b'{"name": "rate_limited", "message": "Daily limit reached."}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['rate limit', '100 emails per day'])
+        text = str(ctx.exception).lower()
+        self.assertIn('rate limit', text)
+        self.assertIn('100 emails per day', text)
+        _assert_no_secrets(self, ctx)
 
     def test_5xx_response(self):
         urlopen = MagicMock(side_effect=_http_error(
             503, 'Service Unavailable',
-            b'{"name": "internal_server_error", "message": "Upstream error."}'
+            b'{"name": "internal_error", "message": "Upstream failure."}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['Temporary Resend provider error', 'Try again shortly'])
+        self.assertIn('Temporary AgentMail provider error', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
-    def test_422_unprocessable_entity_response(self):
+    def test_html_error_page_never_echoed(self):
         urlopen = MagicMock(side_effect=_http_error(
-            422, 'Unprocessable Entity',
-            b'{"name": "validation_error", "message": "Invalid to field."}'
+            502, 'Bad Gateway',
+            b'<html><body><h1>502 Gateway</h1><p>upstream proxy detail xyz</p></body></html>'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        _assert_error(self, ctx, ['HTTP 422', 'verified'])
+        text = str(ctx.exception)
+        self.assertNotIn('<html>', text)
+        self.assertNotIn('upstream proxy detail xyz', text)
+        _assert_no_secrets(self, ctx)
 
     def test_error_with_key_in_provider_body_is_scrubbed(self):
         """A pathological provider response echoing credential-like text
         must still never surface it to the client."""
         urlopen = MagicMock(side_effect=_http_error(
             500, 'Internal Server Error',
-            b'{"name": "internal_server_error", "message": "bad token Bearer test-dummy-resend-api-key leaked"}'
+            b'{"name": "internal_error", "message": "bad token Bearer test-dummy-agentmail-api-key leaked"}'
         ))
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        self.assertNotIn('test-dummy-resend-api-key', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
     def test_timeout_raises_send_error_without_secrets(self):
         urlopen = MagicMock(side_effect=TimeoutError('timed out'))
@@ -280,7 +298,17 @@ class TestResendEmailService(unittest.TestCase):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
                 with self.assertRaises(SMTPSendError) as ctx:
                     _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
-        self.assertNotIn('test-dummy-resend-api-key', str(ctx.exception))
+        self.assertIn('provider unreachable', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
+
+    def test_urlerror_raises_send_error_without_secrets(self):
+        urlopen = MagicMock(side_effect=urllib.error.URLError('connection refused'))
+        with patch.dict(os.environ, TEST_ENV, clear=False):
+            with patch('services.email_service.urllib.request.urlopen', urlopen):
+                with self.assertRaises(SMTPSendError) as ctx:
+                    _send_email('user@example.com', 'Subject', 'text', '<p>html</p>')
+        self.assertIn('provider unreachable', str(ctx.exception))
+        _assert_no_secrets(self, ctx)
 
     def test_status_none_raises_send_error(self):
         urlopen = MagicMock()
@@ -298,7 +326,7 @@ class TestResendEmailService(unittest.TestCase):
     # ---------------------------------------------------------------
     # Recipient validation / injection protection
     # ---------------------------------------------------------------
-    def test_invalid_recipients_are_rejected_before_api_call(self):
+    def test_malformed_recipients_are_rejected_before_api_call(self):
         urlopen = _make_urlopen_mock()
         with patch.dict(os.environ, TEST_ENV, clear=False):
             with patch('services.email_service.urllib.request.urlopen', urlopen):
@@ -319,7 +347,9 @@ class TestResendEmailService(unittest.TestCase):
                 send_password_reset_otp('user@example.com', 'bob', '654321')
 
         for call in urlopen.call_args_list:
-            self.assertNotIn(TEST_ENV['RESEND_API_KEY'], call[0][0].data.decode('utf-8'))
+            payload = call[0][0].data.decode('utf-8')
+            self.assertNotIn(TEST_ENV['AGENTMAIL_API_KEY'], payload)
+            self.assertNotIn('Bearer', payload)
 
 
 if __name__ == '__main__':
