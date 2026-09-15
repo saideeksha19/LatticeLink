@@ -73,7 +73,14 @@ export const ChatProvider = ({ children }) => {
       return;
     }
 
-    const newSocket = io({
+    // Socket.IO must connect to the Render backend explicitly. With no URL
+    // argument, the client would target the Vercel frontend origin, where
+    // no Socket.IO server exists in production.
+    const BACKEND_URL =
+      import.meta.env.VITE_BACKEND_URL ||
+      'https://latticelink-backend.onrender.com';
+
+    const newSocket = io(BACKEND_URL, {
       transports: ['polling', 'websocket'],
       auth: { token: currentUser.session_token }
     });
