@@ -81,7 +81,10 @@ export const ChatProvider = ({ children }) => {
       'https://latticelink-backend.onrender.com';
 
     const newSocket = io(BACKEND_URL, {
-      transports: ['polling', 'websocket'],
+      // Polling only: Render's proxy rejects the WebSocket upgrade (HTTP 500),
+      // while polling works reliably. Restricting the transport list means
+      // no WebSocket upgrade is ever attempted.
+      transports: ['polling'],
       auth: { token: currentUser.session_token }
     });
     
@@ -90,18 +93,34 @@ export const ChatProvider = ({ children }) => {
     newSocket.on('connect', () => {
       // Backend automatically joins rooms based on JWT
       // We can emit heartbeat periodically
+      console.info('[socket] connected:', newSocket.id);
       heartbeatInterval = setInterval(() => {
         newSocket.emit('heartbeat');
       }, 30000);
     });
     
     newSocket.on('disconnect', (reason) => {
+      console.warn('[socket] disconnected:', reason);
       if (reason === 'io server disconnect') {
         // the disconnection was initiated by the server, you need to reconnect manually
         // or trigger a logout if it was due to invalid token
         console.error("Socket disconnected by server. Token might be invalid.");
       }
       clearInterval(heartbeatInterval);
+    });
+
+    // ---- Safe client diagnostics: never log tokens, keys, or OTPs ----
+    newSocket.on('connect_error', (err) => {
+      console.error('[socket] connect_error:', err?.message || 'unknown connection error');
+    });
+
+    // Manager-level transport errors (e.g. a failed poll between reconnects)
+    newSocket.io.on('error', (err) => {
+      console.error('[socket] transport error:', err?.message || 'unknown transport error');
+    });
+
+    newSocket.io.on('reconnect', (attempt) => {
+      console.info('[socket] reconnected after', attempt, 'attempt(s)');
     });
 
       newSocket.on('receive_message', (msg) => {
