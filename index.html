@@ -54,6 +54,31 @@
       }
     </script>
     <title>LatticeLink - Post-Quantum Secure Messaging</title>
+    <script>
+      // Restore the saved appearance BEFORE the UI renders to avoid a flash of the
+      // wrong theme. Must stay in sync with src/context/SettingsContext.jsx
+      // (same localStorage key, same dark-by-default rule).
+      (function () {
+        try {
+          var saved = localStorage.getItem('ll_settings_v4');
+          var mode = 'dark';
+          if (saved) {
+            var appearance = (JSON.parse(saved) || {}).appearance || {};
+            if (appearance.mode === 'light' || appearance.mode === 'dark') {
+              mode = appearance.mode;
+            } else if (appearance.darkMode === false) {
+              mode = 'light';
+            }
+          }
+          if (mode === 'light') {
+            document.documentElement.setAttribute('data-appearance', 'light');
+            document.documentElement.style.colorScheme = 'light';
+          } else {
+            document.documentElement.style.colorScheme = 'dark';
+          }
+        } catch (e) { /* private mode / corrupted value -> stay dark */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -50,9 +50,10 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
       transition={{ duration: 0.8, ease: "easeOut" }}
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
         scrolled 
-          ? 'py-4 bg-[#050505]/70 backdrop-blur-xl border-b border-[rgba(69,216,241,0.1)] shadow-[0_10px_30px_rgba(0,0,0,0.8)]' 
+          ? 'py-4 backdrop-blur-xl border-b border-[rgba(69,216,241,0.1)] shadow-[0_10px_30px_rgba(0,0,0,0.8)]' 
           : 'py-6 bg-transparent'
       }`}
+      style={{ background: scrolled ? 'var(--bg-panel)' : 'transparent' }}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         
@@ -64,7 +65,7 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1857c8] to-[#6c3ef4] flex items-center justify-center shadow-[0_0_15px_rgba(108,62,244,0.5)] group-hover:shadow-[0_0_25px_rgba(69,216,241,0.8)] transition-all duration-300">
             <Shield size={20} className="text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white group-hover:text-[#45d8f1] transition-colors">
+          <span className="text-xl font-bold tracking-tight text-[var(--text-primary)] group-hover:text-[#45d8f1] transition-colors">
             Lattice<span className="font-light">Link</span>
           </span>
         </div>
@@ -75,7 +76,7 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
             <button
               key={link.id}
               onClick={() => handleNavClick(link.id)}
-              className="text-sm font-medium text-gray-300 hover:text-white relative group"
+              className="text-sm font-medium text-[var(--text-secondary)] hover:text-[#45d8f1] relative group"
             >
               {link.name}
               <span className="absolute -bottom-2 left-0 w-0 h-px bg-gradient-to-r from-[#45d8f1] to-[#6c3ef4] transition-all duration-300 group-hover:w-full group-hover:shadow-[0_0_10px_rgba(69,216,241,0.8)]"></span>
@@ -87,13 +88,13 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
         <div className="hidden md:flex items-center gap-4">
           <button 
             onClick={() => onNavigate('auth')}
-            className="text-sm font-bold text-white hover:text-[#45d8f1] transition-colors"
+            className="text-sm font-bold text-[var(--text-primary)] hover:text-[#45d8f1] transition-colors"
           >
             Login
           </button>
           <button 
             onClick={() => onNavigate('auth')}
-            className="px-6 py-2 rounded-full bg-white/10 border border-white/20 hover:border-[#45d8f1] hover:bg-[#45d8f1]/10 text-white text-sm font-bold transition-all shadow-[0_0_0_rgba(69,216,241,0)] hover:shadow-[0_0_15px_rgba(69,216,241,0.4)]"
+            className="px-6 py-2 rounded-full bg-[var(--surface-hover)] border border-[var(--border-strong)] hover:border-[#45d8f1] hover:bg-[#45d8f1]/10 text-[var(--text-primary)] text-sm font-bold transition-all shadow-[0_0_0_rgba(69,216,241,0)] hover:shadow-[0_0_15px_rgba(69,216,241,0.4)]"
           >
             Get Started
           </button>
@@ -101,7 +102,7 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
 
         {/* Mobile Menu Toggle */}
         <button 
-          className="md:hidden text-white"
+          className="md:hidden text-[var(--text-primary)]"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -115,14 +116,15 @@ const PremiumNavbar = ({ currentPage, onNavigate }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#050505]/95 backdrop-blur-xl border-b border-white/10 overflow-hidden"
+            className="md:hidden backdrop-blur-xl border-b border-white/10 overflow-hidden"
+            style={{ background: 'var(--bg-panel)' }}
           >
             <div className="px-6 py-4 flex flex-col gap-4">
               {navLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={() => handleNavClick(link.id)}
-                  className="text-left text-lg font-medium text-gray-300 hover:text-white"
+                  className="text-left text-lg font-medium text-[var(--text-secondary)] hover:text-[#45d8f1]"
                 >
                   {link.name}
                 </button>

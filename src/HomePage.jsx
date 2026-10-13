@@ -220,7 +220,7 @@ const HomePage = ({ onNavigate }) => {
   }, []);
 
   return (
-    <div className="w-full text-white font-sans relative selection:bg-[#45d8f1] selection:text-black bg-[#030712]">
+    <div className="w-full font-sans relative selection:bg-[#45d8f1] selection:text-black" style={{ background: 'var(--bg-main)', color: 'var(--text-primary)' }}>
       
       <PremiumNavbar currentPage="home" onNavigate={onNavigate} />
 
@@ -247,15 +247,15 @@ const HomePage = ({ onNavigate }) => {
               </span>
             </motion.div>
             
-            <motion.h1 variants={fadeIn} className="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none font-tech">
+            <motion.h1 variants={fadeIn} className="text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none font-tech text-[var(--text-primary)]">
               Lattice<span className="holographic-text">Link</span>
             </motion.h1>
             
-            <motion.p variants={fadeIn} className="text-2xl sm:text-3xl text-gray-200 font-light leading-snug border-l-4 border-[#6c3ef4] pl-6 py-1">
+            <motion.p variants={fadeIn} className="text-2xl sm:text-3xl text-[var(--text-secondary)] font-light leading-snug border-l-4 border-[#6c3ef4] pl-6 py-1">
               The Post-Quantum Enterprise<br/>Security & Messaging Platform
             </motion.p>
             
-            <motion.div variants={fadeIn} className="text-gray-400 text-base leading-relaxed max-w-xl">
+            <motion.div variants={fadeIn} className="text-[var(--text-secondary)] text-base leading-relaxed max-w-xl">
               Protect your organizational data against current eavesdropping and future quantum computer decryption attacks through lattice-based key encapsulation and signatures.
             </motion.div>
             
@@ -268,7 +268,7 @@ const HomePage = ({ onNavigate }) => {
               </button>
               <button 
                 onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                className="px-9 py-4 premium-glass text-white rounded-full font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-base border-white/20"
+                className="px-9 py-4 premium-glass text-[var(--text-primary)] rounded-full font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-base border-white/20"
               >
                 Explore Features
               </button>
@@ -309,7 +309,7 @@ const HomePage = ({ onNavigate }) => {
             <InteractiveTiltCard themeColor="#ffffff">
               <div className="bg-white/5 p-6 rounded-xl border border-white/10">
                 <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Registered Users</p>
-                <p className="text-4xl font-mono font-bold text-white">{realStats.users.toLocaleString()}</p>
+                <p className="text-4xl font-mono font-bold text-[var(--text-primary)]">{realStats.users.toLocaleString()}</p>
               </div>
             </InteractiveTiltCard>
 
@@ -323,7 +323,7 @@ const HomePage = ({ onNavigate }) => {
             <InteractiveTiltCard themeColor="#3b82f6">
               <div className="bg-white/5 p-6 rounded-xl border border-[#3b82f6]/30">
                 <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Msgs Encrypted</p>
-                <p className="text-4xl font-mono font-bold text-white">{realStats.messages.toLocaleString()}</p>
+                <p className="text-4xl font-mono font-bold text-[var(--text-primary)]">{realStats.messages.toLocaleString()}</p>
               </div>
             </InteractiveTiltCard>
 
@@ -348,7 +348,7 @@ const HomePage = ({ onNavigate }) => {
       <section id="features" className="py-24 px-6 relative z-10 max-w-7xl mx-auto">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={staggerContainer} className="text-center mb-16">
           <motion.h2 variants={fadeIn} className="text-4xl md:text-5xl font-black font-tech mb-4">Post-Quantum Capabilities</motion.h2>
-          <p className="text-gray-400 text-base max-w-2xl mx-auto">Hover over cards to explore 3D optical tilt physics and security specifications.</p>
+          <p className="text-[var(--text-secondary)] text-base max-w-2xl mx-auto">Hover over cards to explore 3D optical tilt physics and security specifications.</p>
         </motion.div>
 
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -374,8 +374,8 @@ const HomePage = ({ onNavigate }) => {
                     <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110 shadow-lg" style={{ color: feature.color }}>
                       {feature.icon}
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-white font-tech">{feature.title}</h3>
-                    <p className="text-gray-300 text-sm leading-relaxed font-light">{feature.desc}</p>
+                    <h3 className="text-xl font-bold mb-3 text-[var(--text-primary)] font-tech">{feature.title}</h3>
+                    <p className="text-[var(--text-secondary)] text-sm leading-relaxed font-light">{feature.desc}</p>
                   </div>
                   <div className="mt-8 flex items-center gap-2 text-xs font-bold tracking-wide uppercase transition-all duration-300" style={{ color: feature.color }}>
                     <span>Technical Specification</span> <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -393,7 +393,7 @@ const HomePage = ({ onNavigate }) => {
           <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className="text-4xl md:text-5xl font-bold font-tech text-center mb-4">
             Interactive Cryptographic Pipeline
           </motion.h2>
-          <p className="text-center text-gray-400 mb-16 max-w-xl mx-auto">Click any pipeline stage below to inspect the mathematical transformations applied to each packet.</p>
+          <p className="text-center text-[var(--text-secondary)] mb-16 max-w-xl mx-auto">Click any pipeline stage below to inspect the mathematical transformations applied to each packet.</p>
 
           <div className="flex items-center overflow-x-auto pb-10 pt-4 px-4 custom-scrollbar snap-x gap-4">
             {[
@@ -417,7 +417,7 @@ const HomePage = ({ onNavigate }) => {
               >
                 <div className={`premium-glass p-6 text-center w-64 h-40 flex flex-col items-center justify-between border-t-4 cursor-pointer transition-all duration-300 ${activePipelineStep === i ? 'border-t-[#45d8f1] bg-[#1857c8]/30 scale-105 shadow-[0_0_35px_rgba(69,216,241,0.4)]' : 'border-t-[#6c3ef4] hover:bg-white/10'}`}>
                   <div>
-                    <span className="font-bold text-sm block text-white font-tech">{step.name}</span>
+                    <span className="font-bold text-sm block text-[var(--text-primary)] font-tech">{step.name}</span>
                     <span className="text-[11px] text-[#45d8f1] mt-1.5 block font-semibold">{step.spec}</span>
                   </div>
                   <span className={`text-[10px] px-2.5 py-0.5 rounded font-mono ${activePipelineStep === i ? 'bg-[#45d8f1] text-black font-bold' : 'text-gray-400 bg-white/5'}`}>
@@ -446,14 +446,14 @@ const HomePage = ({ onNavigate }) => {
           >
              <div className="flex-1">
                <div className="text-xs uppercase tracking-wider text-[#45d8f1] font-bold mb-1 font-mono">Stage 0{activePipelineStep + 1} Technical Spec</div>
-               <h3 className="text-2xl font-bold text-white mb-2 font-tech">
+               <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-2 font-tech">
                  {[
                    "Plaintext Input", "AES-256-GCM Encryption", "SHA3-512 Integrity Digest", 
                    "ML-DSA Signature", "ML-KEM Key Encapsulation", "Secure Transmission", 
                    "Verification", "Plaintext Recovery"
                  ][activePipelineStep]}
                </h3>
-               <p className="text-sm text-gray-300 leading-relaxed font-light">
+               <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-light">
                  {[
                    "Ingests UTF-8 strings and binary file streams into the client memory space.",
                    "Payload encrypted using a 256-bit key in Galois/Counter Mode with 128-bit authentication tag.",
@@ -487,7 +487,7 @@ const HomePage = ({ onNavigate }) => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div>
             <h3 className="text-2xl font-black text-white font-tech mb-2">Lattice<span className="holographic-text">Link</span></h3>
-            <p className="text-xs text-gray-400">Post-Quantum Enterprise Security Infrastructure. Powered by NIST PQC Standards.</p>
+            <p className="text-xs text-[var(--text-secondary)]">Post-Quantum Enterprise Security Infrastructure. Powered by NIST PQC Standards.</p>
           </div>
           <div className="flex gap-6 text-sm text-gray-400">
             <button onClick={() => onNavigate('auth')} className="hover:text-[#45d8f1] transition-colors">Portal Access</button>

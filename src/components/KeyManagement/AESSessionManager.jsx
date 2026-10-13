@@ -51,13 +51,13 @@ const AESSessionManager = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Session Overview Card */}
-      <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+      <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <h2 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Lock size={24} color="#3b82f6" /> Real-Time AES-256-GCM Sessions
             </h2>
-            <p style={{ color: '#94a3b8', margin: 0 }}>Symmetric Forward-Secrecy Encrypted Channels</p>
+            <p style={{ color: 'var(--text-dim)', margin: 0 }}>Symmetric Forward-Secrecy Encrypted Channels</p>
           </div>
           <div style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
             <Activity size={16} /> {chatList.length} ACTIVE SESSIONS
@@ -65,30 +65,30 @@ const AESSessionManager = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Key Size</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>256-bit AES</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Key Size</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>256-bit AES</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Cipher Mode</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>Galois/Counter Mode</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Cipher Mode</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>Galois/Counter Mode</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Active Channels</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>{chatList.length}</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Active Channels</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>{chatList.length}</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Perfect Forward Secrecy</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Perfect Forward Secrecy</div>
             <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>ACTIVE</div>
           </div>
         </div>
 
         {/* Active Chat Sessions Table */}
-        <h3 style={{ color: 'white', fontSize: '15px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '15px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Key size={16} color="#3b82f6" /> Active Peer Key Sessions
         </h3>
         {chatList.length === 0 ? (
-          <div style={{ color: '#64748b', fontSize: '13px', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '16px', background: 'var(--bg-inset)', borderRadius: '8px', textAlign: 'center' }}>
             No active chat sessions found. Start a chat in Messages to negotiate session keys.
           </div>
         ) : (
@@ -97,9 +97,9 @@ const AESSessionManager = () => {
               const currentKey = rotatedKeys[chat.partner] || 'e4a89f3c1b7d82e05f6a4b9c1d2e3f4a';
               const isRotating = rotatingPeer === chat.partner;
               return (
-                <div key={chat.partner} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div key={chat.partner} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-inset)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                   <div>
-                    <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{chat.partner}</div>
+                    <div style={{ color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '14px' }}>{chat.partner}</div>
                     <div style={{ color: '#3b82f6', fontSize: '12px', fontFamily: 'monospace', marginTop: '2px' }}>
                       Key: {currentKey.slice(0, 16)}...
                     </div>
@@ -125,12 +125,12 @@ const AESSessionManager = () => {
       </div>
 
       {/* Quantum Entropy Pool Status */}
-      <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <h3 style={{ color: 'white', margin: '0 0 24px 0', fontSize: '16px' }}>Quantum Entropy Pool Status</h3>
+      <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        <h3 style={{ color: 'var(--text-primary)', margin: '0 0 24px 0', fontSize: '16px' }}>Quantum Entropy Pool Status</h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ color: '#94a3b8', fontSize: '14px' }}>True Random Number Generator (TRNG) Source</div>
+            <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>True Random Number Generator (TRNG) Source</div>
             <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ShieldCheck size={16} /> FIPS 140-3 Validated
             </div>
@@ -138,26 +138,26 @@ const AESSessionManager = () => {
           
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>Entropy Pool Capacity</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 'bold' }}>Entropy Pool Capacity</span>
               <span style={{ color: '#3b82f6', fontSize: '14px', fontWeight: 'bold' }}>98%</span>
             </div>
-            <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '8px', background: 'var(--surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: '98%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', borderRadius: '4px' }}></div>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '24px', marginTop: '8px' }}>
             <div>
-              <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Generation Rate</div>
-              <div style={{ color: 'white', fontSize: '16px', fontWeight: 'bold' }}>4.2 MB/s</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Generation Rate</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 'bold' }}>4.2 MB/s</div>
             </div>
             <div>
-              <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Pool Size</div>
-              <div style={{ color: 'white', fontSize: '16px', fontWeight: 'bold' }}>4096 Bits</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Pool Size</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 'bold' }}>4096 Bits</div>
             </div>
             <div>
-              <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Last Seeded</div>
-              <div style={{ color: 'white', fontSize: '16px', fontWeight: 'bold' }}>{lastSeeded}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Last Seeded</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 'bold' }}>{lastSeeded}</div>
             </div>
           </div>
           

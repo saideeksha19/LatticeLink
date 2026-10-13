@@ -10,23 +10,26 @@ rate_limit_lock = threading.Lock()
 
 def get_auth_token():
     """Extract Bearer token or session_token from request headers, query args, or JSON body."""
-    auth = request.headers.get('Authorization', '')
+    token = None
+    auth = request.headers.get('Authorization', '').strip()
     if auth.startswith('Bearer '):
-        return auth.split(' ', 1)[1].strip()
-    
-    # Check custom header
-    if request.headers.get('X-Session-Token'):
-        return request.headers.get('X-Session-Token').strip()
+        token = auth.split(' ', 1)[1].strip()
+    elif auth.startswith('bearer '):
+        token = auth.split(' ', 1)[1].strip()
+    elif request.headers.get('X-Session-Token'):
+        token = request.headers.get('X-Session-Token').strip()
+    elif request.args.get('token'):
+        token = request.args.get('token').strip()
+    elif request.is_json and request.json:
+        token = request.json.get('session_token')
         
-    # Check query param
-    if request.args.get('token'):
-        return request.args.get('token').strip()
+    if not token or str(token).lower() in ('undefined', 'null', 'none', ''):
+        return None
         
-    # Check JSON body if available
-    if request.is_json and request.json:
-        return request.json.get('session_token')
-        
-    return None
+    return str(token).strip()
+
+from datetime import datetime, timedelta
+from config import Config
 
 def token_required(f):
     """
@@ -39,14 +42,34 @@ def token_required(f):
         if not token:
             return jsonify({'error': 'Unauthorized: Missing session token'}), 401
             
-        session_record = Session.query.filter_by(session_token=token, is_active=True).first()
+        session_record = Session.query.filter_by(session_token=token).first()
         if not session_record:
             return jsonify({'error': 'Unauthorized: Invalid or expired session token'}), 401
             
+        if not session_record.is_active:
+            return jsonify({'error': 'Unauthorized: Session has expired. Please log in again.'}), 401
+
+        timeout = getattr(Config, 'SESSION_TIMEOUT', 3600)
+        now = datetime.utcnow()
+        if session_record.last_active:
+            last_active = session_record.last_active
+            if isinstance(last_active, str):
+                try:
+                    last_active = datetime.fromisoformat(last_active.replace('Z', ''))
+                except Exception:
+                    last_active = now
+            if (now - last_active).total_seconds() > timeout:
+                session_record.is_active = False
+                db.session.commit()
+                return jsonify({'error': 'Unauthorized: Session has expired. Please log in again.'}), 401
+
         user = User.query.get(session_record.user_id)
         if not user:
             return jsonify({'error': 'Unauthorized: User account not found'}), 401
             
+        session_record.last_active = now
+        db.session.commit()
+
         g.current_user = user
         g.current_session = session_record
         return f(*args, **kwargs)
@@ -64,10 +87,24 @@ def require_role(*roles):
             if not token:
                 return jsonify({'error': 'Unauthorized: Authentication required'}), 401
                 
-            session_record = Session.query.filter_by(session_token=token, is_active=True).first()
-            if not session_record:
+            session_record = Session.query.filter_by(session_token=token).first()
+            if not session_record or not session_record.is_active:
                 return jsonify({'error': 'Unauthorized: Invalid session'}), 401
                 
+            timeout = getattr(Config, 'SESSION_TIMEOUT', 3600)
+            now = datetime.utcnow()
+            if session_record.last_active:
+                last_active = session_record.last_active
+                if isinstance(last_active, str):
+                    try:
+                        last_active = datetime.fromisoformat(last_active.replace('Z', ''))
+                    except Exception:
+                        last_active = now
+                if (now - last_active).total_seconds() > timeout:
+                    session_record.is_active = False
+                    db.session.commit()
+                    return jsonify({'error': 'Unauthorized: Session has expired. Please log in again.'}), 401
+
             user = User.query.get(session_record.user_id)
             if not user:
                 return jsonify({'error': 'Unauthorized: User not found'}), 401

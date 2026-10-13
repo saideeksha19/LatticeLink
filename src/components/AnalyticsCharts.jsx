@@ -72,7 +72,7 @@ export const NativeBarChart = ({ data, dataKey, nameKey, color, height = 200 }) 
         const h = maxVal === 0 ? 0 : (d[dataKey] / maxVal) * 100;
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', group: 'hover' }}>
-            <div style={{ color: 'white', fontSize: '10px', marginBottom: '4px', opacity: 0.7 }}>{d[dataKey]}</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '10px', marginBottom: '4px', opacity: 0.7 }}>{d[dataKey]}</div>
             <div style={{ 
               width: '100%', 
               height: `${h}%`, 
@@ -81,7 +81,7 @@ export const NativeBarChart = ({ data, dataKey, nameKey, color, height = 200 }) 
               transition: 'height 0.5s ease-out',
               borderTop: `1px solid ${color}`
             }}></div>
-            <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{d[nameKey]}</div>
+            <div style={{ color: 'var(--text-dim)', fontSize: '10px', marginTop: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{d[nameKey]}</div>
           </div>
         );
       })}
@@ -94,10 +94,10 @@ export const QuantumReadinessBar = ({ value, label }) => {
   return (
     <div style={{ marginBottom: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ color: 'white', fontSize: '13px', fontWeight: '500' }}>{label}</span>
+        <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '500' }}>{label}</span>
         <span style={{ color: value === 100 ? '#10b981' : (value > 50 ? '#f59e0b' : '#ef4444'), fontSize: '13px', fontWeight: 'bold' }}>{value}%</span>
       </div>
-      <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '8px', background: 'var(--surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
         <div style={{ 
           width: `${value}%`, 
           height: '100%', 

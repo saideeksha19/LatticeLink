@@ -8,7 +8,7 @@ import IncidentInvestigation from './components/Audit/IncidentInvestigation';
 
 /* ─── Tab Header ─── */
 const TabBar = ({ tabs, activeTab, onTabChange }) => (
-  <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>
+  <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>
     {tabs.map((tab) => {
       const isActive = activeTab === tab.id;
       return (
@@ -54,10 +54,10 @@ const AuditCenter = () => {
       <div style={{ padding: '32px', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <h1 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <ShieldCheck size={32} color="#10b981" /> Audit & Digital Forensics
             </h1>
-            <p style={{ color: '#94a3b8', margin: 0 }}>Compliance, event logging, and post-quantum incident investigation.</p>
+            <p style={{ color: 'var(--text-dim)', margin: 0 }}>Compliance, event logging, and post-quantum incident investigation.</p>
           </div>
         </div>
 

@@ -282,8 +282,8 @@ export default function SecurityLab() {
         /* Global & Layout */
         .quantum-lab {
           min-height: 100vh;
-          background: #000;
-          color: white;
+          background: var(--bg-main);
+          color: var(--text-primary);
           font-family: 'Inter', sans-serif;
           position: relative;
           overflow: hidden;
@@ -313,7 +313,7 @@ export default function SecurityLab() {
           font-size: 18px;
           font-weight: 800;
           letter-spacing: 3px;
-          color: #fff;
+          color: var(--text-primary);
           margin: 0;
           display: flex;
           align-items: center;
@@ -343,12 +343,12 @@ export default function SecurityLab() {
         }
 
         .glass-panel {
-          background: rgba(9, 9, 11, 0.7);
+          background: var(--bg-panel);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid var(--border-subtle);
           border-radius: 16px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
         }
 
         /* Main Stage */
@@ -380,11 +380,11 @@ export default function SecurityLab() {
         }
         .chat-header {
           padding: 16px;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
+          border-bottom: 1px solid var(--border-subtle);
           display: flex;
           align-items: center;
           gap: 12px;
-          background: rgba(255,255,255,0.02);
+          background: var(--surface-hover);
         }
         .avatar {
           width: 32px; height: 32px;
@@ -393,8 +393,8 @@ export default function SecurityLab() {
           display: flex; justify-content: center; align-items: center;
           color: #06b6d4;
         }
-        .name { font-weight: 700; font-size: 13px; color: #f8fafc; letter-spacing: 1px; }
-        .status { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #94a3b8; }
+        .name { font-weight: 700; font-size: 13px; color: var(--text-primary); letter-spacing: 1px; }
+        .status { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-dim); }
         .dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; }
 
         .chat-messages {
@@ -406,7 +406,7 @@ export default function SecurityLab() {
           gap: 12px;
         }
         .chat-messages::-webkit-scrollbar { width: 4px; }
-        .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 
         .message-bubble {
           max-width: 85%;
@@ -425,8 +425,8 @@ export default function SecurityLab() {
         }
         .message-bubble.theirs {
           align-self: flex-start;
-          background: #27272a;
-          color: #e4e4e7;
+          background: var(--msg-them-bg);
+          color: var(--msg-them-text);
           border-bottom-left-radius: 4px;
         }
         .message-bubble.intercepted {
@@ -449,15 +449,15 @@ export default function SecurityLab() {
           padding: 16px;
           display: flex;
           gap: 8px;
-          border-top: 1px solid rgba(255,255,255,0.05);
+          border-top: 1px solid var(--border-subtle);
         }
         .chat-input-area input {
           flex: 1;
-          background: rgba(0,0,0,0.5);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: var(--input-bg);
+          border: 1px solid var(--input-border);
           border-radius: 20px;
           padding: 10px 16px;
-          color: #fff;
+          color: var(--text-primary);
           font-size: 13px;
           outline: none;
           transition: border-color 0.2s;
@@ -627,7 +627,7 @@ export default function SecurityLab() {
           padding: 12px 24px;
           border-radius: 40px;
         }
-        .divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+        .divider { width: 1px; height: 30px; background: var(--border-strong); }
         .dock-btn {
           position: relative;
           background: transparent;
@@ -639,7 +639,7 @@ export default function SecurityLab() {
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .dock-btn:hover { color: #fff; transform: scale(1.15) translateY(-6px); background: rgba(255,255,255,0.05); }
+        .dock-btn:hover { color: var(--text-primary); transform: scale(1.15) translateY(-6px); background: var(--surface-hover); }
         .dock-btn.active {
           color: var(--theme);
           background: color-mix(in srgb, var(--theme) 15%, transparent);

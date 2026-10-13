@@ -1,25 +1,33 @@
 from flask import Blueprint, request, jsonify
 from models import (
     db, User, Key, Session, Device, AuditLog,
-    EmailVerificationToken, PasswordResetToken
+    EmailVerificationToken, PasswordResetToken, OtpChallenge
 )
 from utils.security import (
     hash_password,
     verify_password,
     generate_otp,
     hash_otp,
-    verify_otp
+    verify_otp,
+    validate_password_strength,
+    validate_security_pin,
+    hash_recovery_answer,
+    normalize_recovery_answer,
+    verify_recovery_answer
 )
 from services.email_service import (
     send_verification_otp,
     send_password_reset_otp,
     SMTPConfigurationError,
-    SMTPSendError
+    SMTPSendError,
+    is_production_environment
 )
 from utils.decorators import token_required, rate_limit
 from config import Config
 import uuid
 import os
+import re
+import secrets
 import hashlib
 from datetime import datetime, timedelta
 
@@ -28,16 +36,412 @@ auth_bp = Blueprint('auth', __name__)
 def generate_key_pair():
     return os.urandom(512).hex()
 
+# ============================================================
+# REGISTRATION STEP 1: USERNAME VALIDATION
+# ============================================================
+
+@auth_bp.route('/validate-username', methods=['POST'])
+@rate_limit(limit=30, period=60)
+def validate_username():
+    """
+    Validates username format and verifies unique availability in the user database.
+    """
+    data = request.json or {}
+    username = str(data.get('username', '')).strip()
+    if not username:
+        return jsonify({'error': 'Username is required', 'available': False}), 400
+    if len(username) < 3 or len(username) > 30:
+        return jsonify({'error': 'Username must be between 3 and 30 characters', 'available': False}), 400
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
+        return jsonify({'error': 'Username may only contain letters, numbers, underscores, and dots', 'available': False}), 400
+
+    existing = User.query.filter(db.func.lower(User.username) == username.lower()).first()
+    if existing:
+        return jsonify({'error': 'Username is already taken', 'available': False}), 409
+
+    return jsonify({'available': True, 'username': username}), 200
+
+# ============================================================
+# REGISTRATION STEP 2 & 3: SEND OTP (EMAIL / SMS)
+# ============================================================
+
+# ============================================================
+# REGISTRATION STEP 2 & 3: SEND OTP (EMAIL ONLY)
+# ============================================================
+
+@auth_bp.route('/send-sms-otp', methods=['POST'])
+def send_sms_otp_disabled():
+    """SMS verification is removed. Email OTP is the sole verification method."""
+    return jsonify({'error': 'SMS verification is disabled. Email OTP is the sole verification method.'}), 400
+
+@auth_bp.route('/send-otp', methods=['POST'])
+@auth_bp.route('/send-email-otp', methods=['POST'])
+@rate_limit(limit=10, period=60)
+def send_registration_otp():
+    """
+    Generates and dispatches a cryptographically secure 6-digit registration OTP
+    via Email as the sole verification method.
+    Enforces cooldown and 5-minute expiry.
+    """
+    data = request.json or {}
+    username = str(data.get('username', '')).strip()
+    method = str(data.get('method', 'email')).strip().lower()
+    contact = str(data.get('contact') or data.get('email') or '').strip()
+
+    if request.path.endswith('/send-email-otp'):
+        method = 'email'
+        contact = contact or str(data.get('email', '')).strip()
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Strict rule: SMS is removed; only email verification method allowed
+    if method in ('phone', 'sms'):
+        return jsonify({'error': 'SMS verification is disabled. Email OTP is the sole verification method.'}), 400
+
+    if method != 'email':
+        return jsonify({'error': 'Invalid verification method. Allowed methods: email'}), 400
+
+    if not contact:
+        return jsonify({'error': 'Email address is required'}), 400
+
+    contact = contact.lower().strip()
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", contact):
+        return jsonify({'error': 'Invalid email address format'}), 400
+
+    # Contact validation & duplicate check
+    if User.query.filter_by(email=contact).first():
+        return jsonify({'error': 'Email address already registered'}), 409
+
+    if User.query.filter(db.func.lower(User.username) == username.lower()).first():
+        return jsonify({'error': 'Username is already taken'}), 409
+
+    masked_contact = f"{contact[:1]}****@{contact.split('@')[1]}" if '@' in contact else 'your email'
+
+    # Check cooldown and resend limits on existing active challenge
+    recent_challenge = OtpChallenge.query.filter_by(
+        contact=contact,
+        method='email',
+        used=False
+    ).order_by(OtpChallenge.id.desc()).first()
+
+    now = datetime.utcnow()
+    resend_count = 0
+
+    if recent_challenge:
+        time_since_last = (now - recent_challenge.last_resend_at).total_seconds()
+        # Allow 2-second grace for clock skew / timer latency
+        if time_since_last < 58:
+            cooldown_rem = max(1, int(60 - time_since_last))
+            return jsonify({
+                'error': f'Please wait {cooldown_rem} seconds before requesting a new verification code.',
+                'cooldown': cooldown_rem
+            }), 429
+
+        if recent_challenge.resend_count >= 5:
+            return jsonify({'error': 'Maximum OTP resend limit reached. Please wait before attempting again.'}), 429
+
+        resend_count = recent_challenge.resend_count + 1
+        recent_challenge.used = True
+
+    # Generate 6-digit numeric OTP and hash securely (never store plaintext OTP)
+    otp = generate_otp(6)
+    salt, otp_hash = hash_otp(otp)
+    expires_at = now + timedelta(minutes=5) # 5-minute expiry
+
+    new_challenge = OtpChallenge(
+        username=username,
+        contact=contact,
+        method='email',
+        salt=salt,
+        otp_hash=otp_hash,
+        expires_at=expires_at,
+        attempts=0,
+        resend_count=resend_count,
+        last_resend_at=now,
+        used=False,
+        is_verified=False
+    )
+    db.session.add(new_challenge)
+
+    # Dispatch OTP through the email provider
+    provider_info = {}
+    try:
+        send_verification_otp(contact, username, otp)
+        provider_info = {'provider': 'agentmail', 'is_mock': False}
+    except SMTPConfigurationError as e:
+        if not is_production_environment() and os.getenv('DEV_MOCK_EMAIL', 'true').lower() == 'true':
+            import logging
+            logging.getLogger("LatticeLink.Auth").warning(
+                "[DEV MODE ONLY] Email provider is not configured. Development OTP for %s (%s): %s. "
+                "Set AGENTMAIL_API_KEY and AGENTMAIL_INBOX_ID in .env for genuine email delivery.",
+                username, contact, otp
+            )
+            provider_info = {'provider': 'dev_mock', 'is_mock': True}
+        else:
+            db.session.rollback()
+            return jsonify({'error': str(e), 'smtp_configured': False}), 503
+    except SMTPSendError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    # Commit only after delivery successfully initiated / queued
+    db.session.commit()
+
+    is_mock = provider_info.get('is_mock', False)
+    msg = (
+        'Development mode: Email delivery is not configured. Check the local backend console for the OTP code, or configure AGENTMAIL_API_KEY and AGENTMAIL_INBOX_ID in .env for genuine delivery.'
+        if is_mock
+        else 'Verification code dispatched to your email address.'
+    )
+
+    return jsonify({
+        'message': msg,
+        'method': 'email',
+        'masked_contact': masked_contact,
+        'canonical_contact': contact,
+        'provider': provider_info.get('provider', 'email'),
+        'is_mock': is_mock,
+        'cooldown': 60
+    }), 200
+
+# ============================================================
+# REGISTRATION STEP 4: VERIFY OTP
+# ============================================================
+
+@auth_bp.route('/verify-otp', methods=['POST'])
+@rate_limit(limit=15, period=60)
+def verify_registration_otp():
+    """
+    Validates the 6-digit OTP against the secure hash in otp_challenges.
+    Limits verification attempts to 5 and enforces 5-minute expiry.
+    Invalidates the OTP immediately upon success and issues a verification_token.
+    """
+    data = request.json or {}
+    contact = str(data.get('contact') or data.get('email') or '').strip().lower()
+    method = str(data.get('method', 'email')).strip().lower()
+    otp = str(data.get('otp', '')).strip()
+
+    if method in ('phone', 'sms'):
+        return jsonify({'error': 'SMS verification is disabled. Email OTP is the sole verification method.'}), 400
+
+    if not contact or not otp:
+        return jsonify({'error': 'Email address and 6-digit OTP code are required'}), 400
+
+    challenge = OtpChallenge.query.filter_by(
+        contact=contact,
+        method='email',
+        used=False,
+        is_verified=False
+    ).order_by(OtpChallenge.id.desc()).first()
+
+    if not challenge:
+        return jsonify({'error': 'No active verification code found. Please request a new code.'}), 400
+
+    now = datetime.utcnow()
+
+    # Attempt limit: max 5
+    if challenge.attempts >= 5:
+        challenge.used = True
+        db.session.commit()
+        return jsonify({'error': 'Too many failed attempts. Code has been invalidated. Please request a new one.'}), 400
+
+    # Expiry limit: 5 minutes
+    if now > challenge.expires_at:
+        challenge.used = True
+        db.session.commit()
+        return jsonify({'error': 'Verification code has expired. Please request a new one.'}), 400
+
+    challenge.attempts += 1
+
+    if not verify_otp(otp, challenge.salt, challenge.otp_hash):
+        db.session.commit()
+        rem = 5 - challenge.attempts
+        return jsonify({'error': f'Invalid verification code. {rem} attempts remaining.'}), 400
+
+    # Successful verification: immediately invalidate OTP to prevent reuse
+    challenge.is_verified = True
+    challenge.used = True
+    verification_token = secrets.token_hex(32)
+    challenge.token = verification_token
+    db.session.commit()
+
+    return jsonify({
+        'message': 'OTP successfully verified. Please set your password and security PIN.',
+        'verified': True,
+        'verification_token': verification_token,
+        'contact': contact,
+        'method': 'email'
+    }), 200
+
+# ============================================================
+# REGISTRATION STEP 5, 6, 7 & FINAL ACCOUNT CREATION
+# ============================================================
+
 @auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/create-account', methods=['POST'])
 @rate_limit(limit=15, period=60)
 def register():
+    """
+    Creates user account only after all required registration steps succeed:
+    Username -> Verified Email/Phone -> Password Created -> PIN Created -> Recovery Answer Created -> Account Created.
+    Also preserves legacy registration behavior for existing tests when verification_token is omitted.
+    """
     data = request.json or {}
-    username = data.get('username', '').strip()
-    email = data.get('email', '').strip().lower()
+    username = str(data.get('username', '')).strip()
+    verification_token = str(data.get('verification_token', '')).strip()
     password = data.get('password', '')
-    security_question = data.get('security_question', '').strip()
-    security_answer = data.get('security_answer', '').strip()
-    
+    confirm_password = data.get('confirm_password', '')
+    security_pin = str(data.get('security_pin', '')).strip()
+    confirm_pin = str(data.get('confirm_security_pin', '')).strip()
+    security_question = str(data.get('security_question', "What was your favorite teacher's name?")).strip()
+    security_answer = str(data.get('security_answer', '')).strip()
+
+    # ------------------------------------------------------------
+    # STEPPED REGISTRATION WORKFLOW (When verification_token present)
+    # ------------------------------------------------------------
+    if verification_token:
+        challenge = OtpChallenge.query.filter_by(
+            token=verification_token,
+            is_verified=True
+        ).first()
+
+        if not challenge:
+            return jsonify({'error': 'Invalid or expired verification session. Please verify contact again.'}), 400
+
+        # Verification token expires 20 minutes after issue
+        if datetime.utcnow() > challenge.created_at + timedelta(minutes=20):
+            return jsonify({'error': 'Verification session has expired. Please verify contact again.'}), 400
+
+        # 1. Validate Username
+        if not username:
+            username = challenge.username or ''
+        if not username:
+            return jsonify({'error': 'Username is required'}), 400
+        if len(username) < 3 or len(username) > 30:
+            return jsonify({'error': 'Username must be between 3 and 30 characters'}), 400
+
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already registered'}), 409
+
+        # Associate verified email
+        if challenge.method != 'email':
+            return jsonify({'error': 'Invalid verification method. Only email verification is supported.'}), 400
+
+        email = challenge.contact.lower().strip()
+        phone = None
+        method = 'email'
+
+        if email and User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email address already registered'}), 409
+
+        # 2. Validate Password (minimum 8 chars)
+        is_pwd_valid, pwd_err = validate_password_strength(password)
+        if not is_pwd_valid:
+            return jsonify({'error': pwd_err}), 400
+
+        if confirm_password and password != confirm_password:
+            return jsonify({'error': 'Password and confirmation password do not match'}), 400
+
+        # 3. Validate 6-digit Security PIN
+        is_pin_valid, pin_err = validate_security_pin(security_pin, password)
+        if not is_pin_valid:
+            return jsonify({'error': pin_err}), 400
+
+        if confirm_pin and security_pin != confirm_pin:
+            return jsonify({'error': 'Security PIN and confirmation PIN do not match'}), 400
+
+        # 4. Validate Recovery Question & Answer
+        if not security_answer:
+            return jsonify({'error': 'Answer to the recovery question is required'}), 400
+
+        # 5. Cryptographically Hash Credentials (Argon2id / PBKDF2; salted answer)
+        pwd_hash = hash_password(password)
+        pin_hash = hash_password(security_pin)
+        sec_ans_hash = hash_recovery_answer(security_answer)
+
+        node_id = f"LL-{str(uuid.uuid4())[:8].upper()}"
+
+        # 6. Create User Record
+        user = User(
+            username=username,
+            email=email,
+            phone=phone,
+            verification_method=method,
+            password_hash=pwd_hash,
+            security_pin_hash=pin_hash,
+            security_question=security_question,
+            security_answer_hash=sec_ans_hash,
+            node_id=node_id,
+            role='USER',
+            is_verified=True
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        # 7. Generate Initial PQC Keys (v1)
+        mlkem_key = generate_key_pair()
+        mldsa_key = generate_key_pair()
+        sha3_id = hashlib.sha3_256(username.encode('utf-8')).hexdigest()
+
+        key = Key(
+            user_id=user.id,
+            key_version=1,
+            key_type='ML-KEM-768/ML-DSA-65',
+            mlkem_pub_key=mlkem_key,
+            mldsa_pub_key=mldsa_key,
+            sha3_identity=sha3_id,
+            fingerprint=sha3_id[:32],
+            status='active'
+        )
+        db.session.add(key)
+
+        # Invalidate verification token immediately
+        challenge.token = None
+
+        # 8. Register Device and Active Session
+        device_info = request.headers.get('User-Agent') or 'Web Browser'
+        device = Device(
+            user_id=user.id,
+            device_name='Primary Browser Node',
+            os='Web',
+            browser='Browser',
+            status='active'
+        )
+        db.session.add(device)
+        db.session.flush()
+
+        session_token = os.urandom(32).hex()
+        session_obj = Session(
+            user_id=user.id,
+            device_id=device.id,
+            session_token=session_token,
+            ip_address=request.remote_addr or '127.0.0.1',
+            last_active=datetime.utcnow(),
+            is_active=True
+        )
+        db.session.add(session_obj)
+
+        audit = AuditLog(
+            event_type='Registration',
+            target='System',
+            actor=username,
+            severity='info',
+            details=f'New user account initialized for node {node_id} via verified {method}.'
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        return jsonify({
+            'user': user.to_dict(),
+            'session_token': session_token,
+            'message': 'Account created successfully.'
+        }), 201
+
+    # ------------------------------------------------------------
+    # LEGACY REGISTRATION PATH (Maintained for existing tests & backward compatibility)
+    # ------------------------------------------------------------
+    email = data.get('email', '').strip().lower()
     if not username or not email or not password:
         return jsonify({'error': 'Username, email, and password are required'}), 400
         
@@ -52,13 +456,12 @@ def register():
         
     node_id = f"LL-{str(uuid.uuid4())[:8].upper()}"
     pwd_hash = hash_password(password)
-    
     sec_ans_hash = hashlib.sha256(security_answer.lower().strip().encode('utf-8')).hexdigest() if security_answer else None
     
-    # 1. Create User account marked NOT verified
     user = User(
         username=username,
         email=email,
+        verification_method='email',
         password_hash=pwd_hash,
         security_question=security_question or 'Primary Security Protocol',
         security_answer_hash=sec_ans_hash or '',
@@ -68,9 +471,8 @@ def register():
     )
     
     db.session.add(user)
-    db.session.flush() # get user.id
+    db.session.flush()
     
-    # 2. Generate Initial PQC Keys (v1)
     mlkem_key = generate_key_pair()
     mldsa_key = generate_key_pair()
     sha3_id = hashlib.sha3_256(username.encode('utf-8')).hexdigest()
@@ -87,12 +489,10 @@ def register():
     )
     db.session.add(key)
     
-    # 3. Generate 6-digit Email Verification OTP
     otp = generate_otp(6)
     salt, otp_hash = hash_otp(otp)
     expires_at = datetime.utcnow() + timedelta(minutes=10)
     
-    # Invalidate previous verification tokens
     EmailVerificationToken.query.filter_by(user_id=user.id).delete()
     
     token_rec = EmailVerificationToken(
@@ -115,7 +515,6 @@ def register():
     db.session.add(audit)
     db.session.commit()
     
-    # 4. Dispatch Email via SMTP
     try:
         send_verification_otp(email, username, otp)
     except SMTPConfigurationError as e:
@@ -133,6 +532,32 @@ def register():
         'message': 'Registration initiated. Verification OTP sent to your email address.'
     }
     return jsonify(resp_data), 201
+
+# ============================================================
+# SECURITY PIN VERIFICATION (WITH STRICT RATE LIMITING)
+# ============================================================
+
+@auth_bp.route('/verify-security-pin', methods=['POST'])
+@rate_limit(limit=5, period=60)
+@token_required
+def verify_security_pin_endpoint():
+    """
+    Validates user's 6-digit numeric security PIN with strict rate limiting.
+    """
+    data = request.json or {}
+    pin = str(data.get('security_pin', '')).strip()
+    if not pin or len(pin) != 6 or not pin.isdigit():
+        return jsonify({'error': 'Valid 6-digit numeric security PIN is required'}), 400
+
+    from flask import g
+    user = getattr(g, 'current_user', None)
+    if not user or not user.security_pin_hash:
+        return jsonify({'error': 'Security PIN not set for this account'}), 400
+
+    if not verify_password(user.security_pin_hash, pin):
+        return jsonify({'error': 'Invalid security PIN'}), 401
+
+    return jsonify({'valid': True, 'message': 'Security PIN verified successfully'}), 200
 
 @auth_bp.route('/send-verification', methods=['POST'])
 @rate_limit(limit=5, period=60)
@@ -169,20 +594,34 @@ def send_verification():
     db.session.add(token_rec)
     db.session.commit()
     
+    is_mock = False
     try:
         send_verification_otp(user.email, user.username, otp)
     except SMTPConfigurationError as e:
-        return jsonify({
-            'error': str(e),
-            'smtp_configured': False
-        }), 503
+        if not is_production_environment() and os.getenv('DEV_MOCK_EMAIL', 'true').lower() == 'true':
+            import logging
+            logging.getLogger("LatticeLink.Auth").warning(
+                "[DEV MODE ONLY] Email provider is not configured. Development OTP for %s (%s): %s",
+                user.username, user.email, otp
+            )
+            is_mock = True
+        else:
+            return jsonify({
+                'error': str(e),
+                'smtp_configured': False
+            }), 503
     except SMTPSendError as e:
         return jsonify({
             'error': str(e)
         }), 500
 
     resp_data = {
-        'message': 'Verification OTP dispatched to your registered email.'
+        'message': (
+            'Development mode: Email delivery is not configured. Check the local backend console for the OTP code, or configure AGENTMAIL_API_KEY and AGENTMAIL_INBOX_ID in .env for genuine delivery.'
+            if is_mock else
+            'Verification OTP dispatched to your registered email.'
+        ),
+        'is_mock': is_mock
     }
     return jsonify(resp_data), 200
 
@@ -297,13 +736,22 @@ def forgot_password():
     db.session.add(reset_rec)
     db.session.commit()
     
+    is_mock = False
     try:
         send_password_reset_otp(user.email, user.username, otp)
     except SMTPConfigurationError as e:
-        return jsonify({
-            'error': str(e),
-            'smtp_configured': False
-        }), 503
+        if not is_production_environment() and os.getenv('DEV_MOCK_EMAIL', 'true').lower() == 'true':
+            import logging
+            logging.getLogger("LatticeLink.Auth").warning(
+                "[DEV MODE ONLY] Email provider is not configured. Password reset OTP for %s (%s): %s",
+                user.username, user.email, otp
+            )
+            is_mock = True
+        else:
+            return jsonify({
+                'error': str(e),
+                'smtp_configured': False
+            }), 503
     except SMTPSendError as e:
         return jsonify({
             'error': str(e)
@@ -316,7 +764,8 @@ def forgot_password():
     resp_data = {
         'message': generic_msg,
         'masked_email': masked_email,
-        'username': user.username
+        'username': user.username,
+        'is_mock': is_mock
     }
     return jsonify(resp_data), 200
 
@@ -422,6 +871,84 @@ def reset_password():
     
     return jsonify({'message': 'Password reset successfully. Please log in with your new password.'}), 200
 
+# ============================================================
+# ACCOUNT RECOVERY VIA SECURITY QUESTION
+# ============================================================
+
+@auth_bp.route('/recovery-question', methods=['GET', 'POST'])
+@auth_bp.route('/get-recovery-question', methods=['GET', 'POST'])
+@rate_limit(limit=10, period=60)
+def get_recovery_question():
+    """Returns the security recovery question for an account."""
+    if request.method == 'GET':
+        identity = request.args.get('username') or request.args.get('email') or ''
+    else:
+        data = request.json or {}
+        identity = data.get('username') or data.get('email') or ''
+    identity = str(identity).strip()
+    if not identity:
+        return jsonify({'error': 'Username or email is required'}), 400
+
+    user = User.query.filter(
+        (User.username == identity) | (User.email == identity.lower())
+    ).first()
+
+    default_question = "What was your favorite teacher's name?"
+    if not user or not user.security_question:
+        return jsonify({'question': default_question, 'security_question': default_question}), 200
+
+    return jsonify({
+        'username': user.username,
+        'question': user.security_question,
+        'security_question': user.security_question
+    }), 200
+
+@auth_bp.route('/recover-with-security-question', methods=['POST'])
+@rate_limit(limit=5, period=60)
+def recover_with_security_question():
+    """
+    Recovers account and sets new password using the user's security question answer.
+    """
+    data = request.json or {}
+    identity = str(data.get('username') or data.get('email') or '').strip()
+    security_answer = str(data.get('security_answer', '')).strip()
+    new_password = str(data.get('new_password', '')).strip()
+    confirm_password = str(data.get('confirm_password', '')).strip()
+
+    if not identity or not security_answer or not new_password:
+        return jsonify({'error': 'Username/email, security answer, and new password are required'}), 400
+
+    if len(new_password) < 8:
+        return jsonify({'error': 'New password must be at least 8 characters long'}), 400
+
+    if confirm_password and new_password != confirm_password:
+        return jsonify({'error': 'New password and confirmation password do not match'}), 400
+
+    user = User.query.filter(
+        (User.username == identity) | (User.email == identity.lower())
+    ).first()
+
+    if not user or not user.security_answer_hash:
+        return jsonify({'error': 'Account recovery failed. Invalid credentials or answer.'}), 401
+
+    if not verify_recovery_answer(security_answer, user.security_answer_hash):
+        return jsonify({'error': 'Incorrect answer to recovery question.'}), 401
+
+    user.password_hash = hash_password(new_password)
+    Session.query.filter_by(user_id=user.id).update({'is_active': False})
+
+    audit = AuditLog(
+        event_type='PasswordReset',
+        target='UserAccount',
+        actor=user.username,
+        severity='warning',
+        details='Password reset successfully completed via Security Question recovery. Prior sessions revoked.'
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    return jsonify({'message': 'Password reset successfully using security recovery answer. Please log in.'}), 200
+
 @auth_bp.route('/login', methods=['POST'])
 @rate_limit(limit=20, period=60)
 def login():
@@ -497,6 +1024,7 @@ def login():
         device_id=device.id,
         session_token=session_token,
         ip_address=request.remote_addr or '127.0.0.1',
+        last_active=datetime.utcnow(),
         is_active=True
     )
     db.session.add(session_obj)

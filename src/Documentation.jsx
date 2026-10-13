@@ -6,7 +6,7 @@ import MatrixRain from './MatrixRain';
 // Interactive Animated Background Diagram
 const QuantumVisualizer = () => {
   return (
-    <div style={{ position: 'relative', width: '100%', height: '400px', borderRadius: '24px', overflow: 'hidden', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: '100%', height: '400px', borderRadius: '24px', overflow: 'hidden', background: 'var(--bg-inset)', border: '1px solid rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
         <defs>
           <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
@@ -60,7 +60,7 @@ const SectionHeading = ({ children, color = '#38bdf8' }) => (
     style={{ textAlign: 'center', marginBottom: '80px' }}
   >
     <div style={{ display: 'inline-block', width: '2px', height: '60px', background: `linear-gradient(to bottom, transparent, ${color})`, marginBottom: '24px' }}></div>
-    <h2 style={{ color: 'white', fontSize: '56px', fontWeight: '900', letterSpacing: '-2px', margin: '0 0 24px 0', lineHeight: 1.1 }}>{children}</h2>
+    <h2 style={{ color: 'var(--text-primary)', fontSize: '56px', fontWeight: '900', letterSpacing: '-2px', margin: '0 0 24px 0', lineHeight: 1.1 }}>{children}</h2>
   </motion.div>
 );
 
@@ -71,8 +71,8 @@ const FeatureCard = ({ icon: Icon, title, desc, color, delay }) => (
     viewport={{ once: true, margin: "-50px" }}
     transition={{ duration: 0.8, delay, ease: "easeOut" }}
     style={{
-      background: 'rgba(15, 23, 42, 0.6)',
-      border: '1px solid rgba(255,255,255,0.05)',
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: '24px',
       padding: '40px',
       backdropFilter: 'blur(20px)',
@@ -87,8 +87,8 @@ const FeatureCard = ({ icon: Icon, title, desc, color, delay }) => (
     <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color, border: `1px solid ${color}44` }}>
       <Icon size={32} />
     </div>
-    <h3 style={{ color: 'white', fontSize: '24px', margin: 0 }}>{title}</h3>
-    <p style={{ color: '#94a3b8', fontSize: '16px', lineHeight: 1.6, margin: 0 }}>{desc}</p>
+    <h3 style={{ color: 'var(--text-primary)', fontSize: '24px', margin: 0 }}>{title}</h3>
+    <p style={{ color: 'var(--text-dim)', fontSize: '16px', lineHeight: 1.6, margin: 0 }}>{desc}</p>
   </motion.div>
 );
 
@@ -104,7 +104,7 @@ const Documentation = ({ onNavigate }) => {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
   return (
-    <div ref={containerRef} style={{ background: '#020617', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div ref={containerRef} style={{ background: 'var(--bg-page)', minHeight: '100vh', overflowX: 'hidden' }}>
       <MatrixRain />
       
       {/* 1. Cinematic Hero Section */}
@@ -119,10 +119,10 @@ const Documentation = ({ onNavigate }) => {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', border: '1px solid rgba(56, 189, 248, 0.3)', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', fontSize: '14px', fontWeight: 'bold', marginBottom: '32px' }}>
               <Shield size={16} /> LATTICELINK ARCHITECTURE V2
             </div>
-            <h1 style={{ color: 'white', fontSize: 'clamp(48px, 8vw, 100px)', fontWeight: '900', letterSpacing: '-4px', lineHeight: 1, marginBottom: '32px', textShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
+            <h1 style={{ color: 'var(--text-primary)', fontSize: 'clamp(48px, 8vw, 100px)', fontWeight: '900', letterSpacing: '-4px', lineHeight: 1, marginBottom: '32px', textShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
               The Post-Quantum<br />Era is Here.
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: 'clamp(18px, 2vw, 24px)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-dim)', fontSize: 'clamp(18px, 2vw, 24px)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6 }}>
               A cinematic deep dive into the unbreakable, zero-trust infrastructure powering your secure communications.
             </p>
           </motion.div>
@@ -130,7 +130,7 @@ const Documentation = ({ onNavigate }) => {
 
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5, duration: 1 }}
-          style={{ position: 'absolute', bottom: '40px', left: '50%', x: '-50%', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
+          style={{ position: 'absolute', bottom: '40px', left: '50%', x: '-50%', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}
         >
           <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '2px' }}>Scroll to Explore</span>
           <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }}><ChevronDown size={24} color="#38bdf8" /></motion.div>
@@ -167,7 +167,7 @@ const Documentation = ({ onNavigate }) => {
       </div>
 
       {/* 3. The Cryptographic Engine */}
-      <div style={{ padding: '120px 24px', background: 'rgba(15, 23, 42, 0.4)', position: 'relative', zIndex: 10 }}>
+      <div style={{ padding: '120px 24px', background: 'var(--bg-surface)', position: 'relative', zIndex: 10 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <SectionHeading color="#10b981">The Quantum Shield.</SectionHeading>
           
@@ -183,15 +183,15 @@ const Documentation = ({ onNavigate }) => {
             {/* Tech Specs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
               <div>
-                <h3 style={{ color: 'white', fontSize: '32px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}><Lock color="#38bdf8" /> AES-256-GCM</h3>
-                <p style={{ color: '#94a3b8', fontSize: '18px', lineHeight: 1.7 }}>
+                <h3 style={{ color: 'var(--text-primary)', fontSize: '32px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}><Lock color="#38bdf8" /> AES-256-GCM</h3>
+                <p style={{ color: 'var(--text-dim)', fontSize: '18px', lineHeight: 1.7 }}>
                   The gold standard of symmetric encryption. Every message payload, attachment, and Voice/Video stream is encrypted using AES-256 in Galois/Counter Mode. This provides unparalleled confidentiality and built-in tamper detection via authentication tags.
                 </p>
               </div>
               
               <div>
-                <h3 style={{ color: 'white', fontSize: '32px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}><Cpu color="#10b981" /> ML-KEM-1024</h3>
-                <p style={{ color: '#94a3b8', fontSize: '18px', lineHeight: 1.7 }}>
+                <h3 style={{ color: 'var(--text-primary)', fontSize: '32px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}><Cpu color="#10b981" /> ML-KEM-1024</h3>
+                <p style={{ color: 'var(--text-dim)', fontSize: '18px', lineHeight: 1.7 }}>
                   Formerly known as CRYSTALS-Kyber, this NIST-standardized algorithm secures the initial handshake. Before AES encryption begins, Alice and Bob use lattice-based cryptography to securely establish a shared secret, rendering "Store Now, Decrypt Later" attacks by quantum computers useless.
                 </p>
               </div>
@@ -209,8 +209,8 @@ const Documentation = ({ onNavigate }) => {
               initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
               style={{ flex: '1 1 500px' }}
            >
-             <h3 style={{ color: 'white', fontSize: '40px', fontWeight: 'bold', marginBottom: '24px', lineHeight: 1.2 }}>Voice & Video bypass the server entirely.</h3>
-             <p style={{ color: '#94a3b8', fontSize: '20px', lineHeight: 1.6, marginBottom: '32px' }}>
+             <h3 style={{ color: 'var(--text-primary)', fontSize: '40px', fontWeight: 'bold', marginBottom: '24px', lineHeight: 1.2 }}>Voice & Video bypass the server entirely.</h3>
+             <p style={{ color: 'var(--text-dim)', fontSize: '20px', lineHeight: 1.6, marginBottom: '32px' }}>
                When you initiate a call, LatticeLink acts only as a signaling intermediary. Once the WebRTC tunnel is established, audio and video streams flow directly between your machine and the recipient. 
              </p>
              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -220,7 +220,7 @@ const Documentation = ({ onNavigate }) => {
                  'Zero server bandwidth consumption',
                  'Immune to centralized wiretapping'
                ].map((item, i) => (
-                 <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'white', fontSize: '18px' }}>
+                 <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-primary)', fontSize: '18px' }}>
                    <CheckCircle size={20} color="#8b5cf6" /> {item}
                  </li>
                ))}
@@ -237,8 +237,8 @@ const Documentation = ({ onNavigate }) => {
       </div>
       
       {/* Footer / CTA */}
-      <div style={{ padding: '120px 24px', textAlign: 'center', position: 'relative', zIndex: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <h2 style={{ color: 'white', fontSize: '48px', fontWeight: '900', marginBottom: '32px' }}>Ready to secure your comms?</h2>
+      <div style={{ padding: '120px 24px', textAlign: 'center', position: 'relative', zIndex: 10, borderTop: '1px solid var(--border-subtle)' }}>
+        <h2 style={{ color: 'var(--text-primary)', fontSize: '48px', fontWeight: '900', marginBottom: '32px' }}>Ready to secure your comms?</h2>
         <button onClick={() => onNavigate ? onNavigate('messages') : window.history.back()} className="neon-button" style={{ fontSize: '18px', padding: '16px 48px', cursor: 'pointer' }}>
           Return to Dashboard
         </button>

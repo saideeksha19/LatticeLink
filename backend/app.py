@@ -42,7 +42,9 @@ CORS(
     app,
     resources={
         r"/api/*": {
-            "origins": "*"
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Session-Token", "X-Requested-With"]
         }
     }
 )
@@ -118,6 +120,11 @@ def auto_migrate_schema():
         ("users", "verification_token_hash", "VARCHAR(255)"),
         ("users", "verification_token_expires", "DATETIME"),
         ("users", "settings_json", "TEXT"),
+        ("users", "phone", "VARCHAR(30)"),
+        ("users", "verification_method", "VARCHAR(20) DEFAULT 'email'"),
+        ("users", "security_pin_hash", "VARCHAR(255)"),
+        ("users", "security_question", "VARCHAR(255)"),
+        ("users", "security_answer_hash", "VARCHAR(255)"),
 
         ("files", "receiver", "VARCHAR(80)"),
 
@@ -133,6 +140,19 @@ def auto_migrate_schema():
         ("messages", "nonce", "VARCHAR(64)"),
         ("messages", "key_version", "INTEGER DEFAULT 1"),
         ("messages", "file_id", "VARCHAR(80)"),
+        ("messages", "type", "VARCHAR(20) DEFAULT 'text'"),
+
+        # Poll meta columns (tables created by db.create_all; columns added if missing)
+        ("polls", "allow_change_vote", "BOOLEAN DEFAULT 1"),
+        ("polls", "show_voter_identities", "BOOLEAN DEFAULT 0"),
+
+        # Chat customization
+        ("chat_customizations", "username", "VARCHAR(80)"),
+        ("chat_customizations", "wallpaper_kind", "VARCHAR(20)"),
+        ("chat_customizations", "wallpaper_type", "VARCHAR(20) DEFAULT 'default'"),
+        ("chat_customizations", "wallpaper_value", "VARCHAR(512)"),
+        ("chat_customizations", "wallpaper_overlay", "REAL DEFAULT 0.0"),
+        ("chat_customizations", "created_at", "DATETIME"),
     ]
 
     for table, column, col_type in migrations:
@@ -236,6 +256,9 @@ from routes.user_routes import user_bp
 from routes.chat_routes import chat_bp
 from routes.vault_routes import vault_bp
 from routes.security_routes import security_bp
+from routes.poll_routes import poll_bp
+from routes.status_routes import status_bp
+from routes.customization_routes import custom_bp
 
 
 app.register_blueprint(
@@ -261,6 +284,21 @@ app.register_blueprint(
 app.register_blueprint(
     security_bp,
     url_prefix="/api/security"
+)
+
+app.register_blueprint(
+    poll_bp,
+    url_prefix="/api/polls"
+)
+
+app.register_blueprint(
+    status_bp,
+    url_prefix="/api/status"
+)
+
+app.register_blueprint(
+    custom_bp,
+    url_prefix="/api/chat/custom"
 )
 
 
@@ -350,8 +388,10 @@ def internal_error(error):
 # ============================================================
 
 from routes.chat_routes import init_socketio as init_chat_socketio
+from routes.status_routes import init_socketio as init_status_socketio
 
 init_chat_socketio(socketio)
+init_status_socketio(socketio)
 
 
 # ============================================================

@@ -26,7 +26,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
   if (!isActive) return null;
 
   return (
-    <div style={{ padding: '24px', background: 'rgba(0,0,0,0.6)', borderRadius: '16px', border: '1px solid rgba(56,189,248,0.3)', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ padding: '24px', background: 'var(--bg-panel)', borderRadius: '16px', border: '1px solid rgba(56,189,248,0.3)', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
       
       {/* Network Lines */}
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}>
@@ -50,7 +50,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(56,189,248,0.2)', border: '1px solid #38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Monitor size={24} color="#38bdf8" />
           </div>
-          <span style={{ color: 'white', fontSize: '12px' }}>Desktop</span>
+          <span style={{ color: 'var(--text-primary)', fontSize: '12px' }}>Desktop</span>
           {step === 1 && <span style={{ color: '#f59e0b', fontSize: '10px' }}>Encrypting...</span>}
         </div>
 
@@ -71,7 +71,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 2, transform: 'translateX(-20px)' }}>
           <div style={{ 
             width: '64px', height: '64px', borderRadius: '50%', 
-            background: step >= 4 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', 
+            background: step >= 4 ? 'rgba(16,185,129,0.2)' : 'var(--surface-hover)', 
             border: `1px solid ${step >= 4 ? '#10b981' : 'rgba(255,255,255,0.2)'}`, 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: step >= 4 ? '0 0 30px rgba(16,185,129,0.4)' : 'none',
@@ -79,7 +79,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
           }}>
             <Server size={32} color={step >= 4 ? '#10b981' : '#64748b'} />
           </div>
-          <span style={{ color: 'white', fontSize: '12px' }}>Cloud Relay</span>
+          <span style={{ color: 'var(--text-primary)', fontSize: '12px' }}>Cloud Relay</span>
           <span style={{ color: '#94a3b8', fontSize: '10px' }}>Zero Knowledge</span>
         </div>
 
@@ -112,7 +112,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ 
               width: '36px', height: '36px', borderRadius: '8px', 
-              background: step >= 5 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', 
+              background: step >= 5 ? 'rgba(16,185,129,0.2)' : 'var(--surface-hover)', 
               border: `1px solid ${step >= 5 ? '#10b981' : 'rgba(255,255,255,0.1)'}`, 
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: '0.3s'
@@ -120,7 +120,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
               <Smartphone size={18} color={step >= 5 ? '#10b981' : '#94a3b8'} />
             </div>
             <div>
-              <div style={{ color: 'white', fontSize: '12px' }}>iPhone</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '12px' }}>iPhone</div>
               {step >= 5 && <div style={{ color: '#10b981', fontSize: '10px' }}>Synced</div>}
             </div>
           </div>
@@ -128,7 +128,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ 
               width: '36px', height: '36px', borderRadius: '8px', 
-              background: step >= 5 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', 
+              background: step >= 5 ? 'rgba(16,185,129,0.2)' : 'var(--surface-hover)', 
               border: `1px solid ${step >= 5 ? '#10b981' : 'rgba(255,255,255,0.1)'}`, 
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: '0.3s'
@@ -136,7 +136,7 @@ const MultiDeviceVisualizer = ({ isActive, onComplete }) => {
               <Laptop size={18} color={step >= 5 ? '#10b981' : '#94a3b8'} />
             </div>
             <div>
-              <div style={{ color: 'white', fontSize: '12px' }}>MacBook</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '12px' }}>MacBook</div>
               {step >= 5 && <div style={{ color: '#10b981', fontSize: '10px' }}>Synced</div>}
             </div>
           </div>

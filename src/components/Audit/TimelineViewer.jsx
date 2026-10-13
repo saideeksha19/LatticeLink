@@ -14,26 +14,26 @@ const TimelineViewer = () => {
   ];
 
   return (
-    <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-      <h3 style={{ color: 'white', margin: '0 0 24px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+      <h3 style={{ color: 'var(--text-primary)', margin: '0 0 24px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <Clock size={20} color="#3b82f6"/> Global Activity Timeline
       </h3>
 
       <div style={{ position: 'relative', paddingLeft: '16px' }}>
-        <div style={{ position: 'absolute', left: '27px', top: '24px', bottom: '24px', width: '2px', background: 'rgba(255,255,255,0.1)' }}></div>
+        <div style={{ position: 'absolute', left: '27px', top: '24px', bottom: '24px', width: '2px', background: 'var(--surface-hover)' }}></div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {events.map((ev, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '24px', position: 'relative', zIndex: 2 }}>
-              <div style={{ width: '80px', color: '#94a3b8', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', fontWeight: 'bold' }}>
+              <div style={{ width: '80px', color: 'var(--text-dim)', fontSize: '12px', fontFamily: 'monospace', textAlign: 'right', fontWeight: 'bold' }}>
                 {ev.time}
               </div>
               
-              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#0f172a', border: `2px solid ${ev.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-elevated)', border: `2px solid ${ev.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ev.icon size={12} color={ev.color} />
               </div>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px 20px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', flex: 1, color: 'white', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: 'var(--bg-inset)', padding: '12px 20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', flex: 1, color: 'var(--text-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ width: '4px', height: '16px', background: ev.color, borderRadius: '2px' }}></span>
                 {ev.message}
               </div>

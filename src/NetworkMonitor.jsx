@@ -91,7 +91,7 @@ const NetworkMonitor = () => {
           <h1 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px', textShadow: `0 2px 10px ${glowColor}` }}>
             <Network size={36} color={primaryColor} /> Global Threat Map
           </h1>
-          <p style={{ color: '#cbd5e1', margin: 0, textShadow: '0 1px 5px rgba(0,0,0,0.8)' }}>Live quantum topology and packet traversal.</p>
+          <p style={{ color: 'var(--text-secondary)', margin: 0, textShadow: '0 1px 5px rgba(0,0,0,0.8)' }}>Live quantum topology and packet traversal.</p>
         </div>
         <div style={{ display: 'flex', gap: '16px', pointerEvents: 'auto' }}>
           <button 
@@ -117,11 +117,11 @@ const NetworkMonitor = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 20 }}
-            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '320px', background: 'rgba(10, 15, 30, 0.9)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 40, padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}
+            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '320px', background: 'var(--bg-panel)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 40, padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px' }}>
-              <span style={{ color: 'white', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={18} color={primaryColor} /> SYSTEM TELEMETRY</span>
-              <button onClick={() => setRightPanelOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><ChevronRight size={24} /></button>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={18} color={primaryColor} /> SYSTEM TELEMETRY</span>
+              <button onClick={() => setRightPanelOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}><ChevronRight size={24} /></button>
             </div>
             <div className="cyber-metric">
               <div className="metric-label">ENTANGLEMENT RATIO</div>
@@ -150,18 +150,18 @@ const NetworkMonitor = () => {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 20 }}
-            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '400px', background: 'rgba(10, 15, 30, 0.95)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.1)', zIndex: 40, padding: '32px 24px', display: 'flex', flexDirection: 'column' }}
+            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '400px', background: 'var(--bg-panel)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.1)', zIndex: 40, padding: '32px 24px', display: 'flex', flexDirection: 'column' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px', marginBottom: '16px' }}>
-              <span style={{ color: 'white', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace' }}><Terminal size={18} color={primaryColor} /> LOG STREAM</span>
-              <button onClick={() => setLeftPanelOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><ChevronLeft size={24} /></button>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace' }}><Terminal size={18} color={primaryColor} /> LOG STREAM</span>
+              <button onClick={() => setLeftPanelOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}><ChevronLeft size={24} /></button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', fontFamily: 'monospace', fontSize: '12px' }}>
               <AnimatePresence>
                 {logs.map((log, i) => {
                   const isAlert = log.includes('[WARN]') || log.includes('[CRITICAL]') || log.includes('[ALERT]') || log.includes('[GLITCH]');
                   return (
-                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ color: isAlert ? '#ef4444' : '#10b981', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} style={{ color: isAlert ? '#ef4444' : '#10b981', padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                       {log}
                     </motion.div>
                   );
@@ -174,12 +174,12 @@ const NetworkMonitor = () => {
 
       {/* Toggle Buttons (Visible when panels are closed) */}
       {!rightPanelOpen && (
-        <button onClick={() => setRightPanelOpen(true)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRight: 'none', padding: '16px 8px', borderRadius: '8px 0 0 8px', color: 'white', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
+        <button onClick={() => setRightPanelOpen(true)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', borderRight: 'none', padding: '16px 8px', borderRadius: '8px 0 0 8px', color: 'var(--text-primary)', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
           <Activity size={20} color={primaryColor} />
         </button>
       )}
       {!leftPanelOpen && (
-        <button onClick={() => setLeftPanelOpen(true)} style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: 'none', padding: '16px 8px', borderRadius: '0 8px 8px 0', color: 'white', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
+        <button onClick={() => setLeftPanelOpen(true)} style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: 'none', padding: '16px 8px', borderRadius: '0 8px 8px 0', color: 'var(--text-primary)', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
           <Terminal size={20} color={primaryColor} />
         </button>
       )}
@@ -281,7 +281,7 @@ const NetworkMonitor = () => {
                 </div>
 
                 {/* Node Label */}
-                <div style={{ marginTop: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${hoveredNode?.id === node.id ? node.color : 'rgba(255,255,255,0.1)'}`, color: 'white', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap', backdropFilter: 'blur(4px)', transition: 'border 0.3s' }}>
+                <div style={{ marginTop: '8px', background: 'var(--bg-inset)', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${hoveredNode?.id === node.id ? node.color : 'rgba(255,255,255,0.1)'}`, color: 'white', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap', backdropFilter: 'blur(4px)', transition: 'border 0.3s' }}>
                   {node.label}
                 </div>
 
@@ -294,25 +294,25 @@ const NetworkMonitor = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       style={{ 
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', 
-                        marginTop: '16px', width: '220px', background: 'rgba(10,15,30,0.95)', 
+                        marginTop: '16px', width: '220px', background: 'var(--bg-panel)', 
                         border: `1px solid ${node.color}`, borderRadius: '8px', padding: '12px',
                         boxShadow: `0 10px 30px rgba(0,0,0,0.5), 0 0 20px ${node.color}33`,
                         backdropFilter: 'blur(10px)', zIndex: 100, textAlign: 'left', pointerEvents: 'none'
                       }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
                         <Icon size={14} color={node.color} />
-                        <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>{node.label}</span>
+                        <span style={{ color: 'var(--text-primary)', fontSize: '12px', fontWeight: 'bold' }}>{node.label}</span>
                       </div>
-                      <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '12px', lineHeight: '1.4' }}>
+                      <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginBottom: '12px', lineHeight: '1.4' }}>
                         {node.desc}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ color: '#64748b' }}>UPTIME</span>
+                          <span style={{ color: 'var(--text-muted)' }}>UPTIME</span>
                           <span style={{ color: '#10b981' }}>{node.uptime}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-                          <span style={{ color: '#64748b' }}>LATENCY</span>
+                          <span style={{ color: 'var(--text-muted)' }}>LATENCY</span>
                           <span style={{ color: '#38bdf8' }}>{node.latency}</span>
                         </div>
                       </div>
@@ -322,12 +322,12 @@ const NetworkMonitor = () => {
 
                 {/* Attack Glitch Overlay */}
                 {attackMode && node.id === 'core' && (
-                   <div style={{ position: 'absolute', bottom: '-25px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', letterSpacing: '1px', border: '1px solid #ef4444', animation: 'flash 1s infinite' }}>
+                   <div style={{ position: 'absolute', bottom: '-25px', background: 'rgba(239, 68, 68, 0.9)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', letterSpacing: '1px', border: '1px solid #ef4444', animation: 'flash 1s infinite' }}>
                      TARGET LOCKED
                    </div>
                 )}
                 {attackMode && node.type === 'relay' && Math.random() > 0.5 && (
-                   <div style={{ position: 'absolute', bottom: '-25px', background: 'rgba(239, 68, 68, 0.9)', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', letterSpacing: '1px', border: '1px solid #ef4444', animation: 'flash 0.5s infinite' }}>
+                   <div style={{ position: 'absolute', bottom: '-25px', background: 'rgba(239, 68, 68, 0.9)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', letterSpacing: '1px', border: '1px solid #ef4444', animation: 'flash 0.5s infinite' }}>
                      INTERCEPT DETECTED
                    </div>
                 )}
@@ -374,15 +374,15 @@ const NetworkMonitor = () => {
 
         /* Cyber Metrics HUD */
         .cyber-metric {
-          background: rgba(10, 15, 30, 0.6);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: var(--bg-panel);
+          border: 1px solid var(--border-strong);
           padding: 12px 16px;
           border-radius: 8px;
           width: 250px;
           backdrop-filter: blur(10px);
         }
         .metric-label {
-          color: #94a3b8;
+          color: var(--text-dim);
           font-size: 10px;
           font-weight: bold;
           letter-spacing: 2px;
@@ -397,7 +397,7 @@ const NetworkMonitor = () => {
         }
         .metric-bar {
           height: 4px;
-          background: rgba(255,255,255,0.1);
+          background: var(--surface-hover);
           border-radius: 2px;
           overflow: hidden;
         }

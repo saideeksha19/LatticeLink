@@ -89,7 +89,7 @@ class TestCanonicalBackend(unittest.TestCase):
         with app.app_context():
             user = User.query.filter_by(username='bob_node').first()
             self.assertIsNotNone(user)
-            self.assertTrue(user.password_hash.startswith('pbkdf2_sha256$'))
+            self.assertTrue(user.password_hash.startswith('pbkdf2_sha256$') or user.password_hash.startswith('$argon2'))
             # Distinct hashes for same password (salted)
             from utils.security import hash_password
             second_hash = hash_password('MySecretPassword')

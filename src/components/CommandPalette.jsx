@@ -50,16 +50,16 @@ const CommandPalette = ({ onNavigate }) => {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+      background: 'var(--bg-inset)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
       paddingTop: '15vh', zIndex: 9999
     }} onClick={() => setIsOpen(false)}>
       
       <div 
-        style={{ width: '600px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+        style={{ width: '600px', background: 'var(--bg-elevated)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
           <Search size={20} color="#94a3b8" />
           <input 
             ref={inputRef}
@@ -67,7 +67,7 @@ const CommandPalette = ({ onNavigate }) => {
             placeholder="Search commands or modules..." 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '18px', width: '100%', outline: 'none', marginLeft: '12px' }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '18px', width: '100%', outline: 'none', marginLeft: '12px' }}
           />
         </div>
 
@@ -76,21 +76,21 @@ const CommandPalette = ({ onNavigate }) => {
             <div 
               key={i} 
               onClick={() => handleCommand(cmd.action)}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.02)' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', cursor: 'pointer', borderBottom: '1px solid var(--border-subtle)' }}
               onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
               onMouseOut={e => e.currentTarget.style.background = 'transparent'}
             >
               <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: `${cmd.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <cmd.icon size={16} color={cmd.color} />
               </div>
-              <span style={{ color: 'white', fontSize: '15px' }}>{cmd.label}</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{cmd.label}</span>
             </div>
           )) : (
-            <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>No commands found</div>
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No commands found</div>
           )}
         </div>
         
-        <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.4)', color: '#64748b', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ padding: '12px 16px', background: 'var(--bg-inset)', color: 'var(--text-muted)', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
           <span>Use <b>↑ ↓</b> to navigate</span>
           <span><b>Enter</b> to select</span>
           <span><b>Esc</b> to close</span>

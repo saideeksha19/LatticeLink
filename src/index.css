@@ -1,8 +1,40 @@
 :root {
-  --bg-main: #050505; /* Pure black base */
-  --bg-space: #010a18; /* Deep space blue */
+  /* ── Dark mode (default) ─────────────────────────── */
+  color-scheme: dark;
+  --bg-main: #050505;
+  --bg-space: #010a18;
+  --bg-page: #020617;
+  --bg-surface: rgba(15, 23, 42, 0.85);
+  --bg-panel: rgba(8, 12, 24, 0.92);
+  --bg-elevated: #0f172a;
+  --bg-inset: rgba(0, 0, 0, 0.35);
+  --bg-header: rgba(0, 0, 0, 0.5);
+  --surface-hover: rgba(255, 255, 255, 0.05);
   --text-primary: #ffffff;
   --text-secondary: #cbd5e1;
+  --text-dim: #94a3b8;
+  --text-bright: #e2e8f0;
+  --text-muted: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(108, 62, 244, 0.3);
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --sidebar-bg: rgba(5, 8, 15, 0.95);
+  --chat-bg: rgba(5, 8, 15, 0.9);
+  --header-bg: rgba(0, 0, 0, 0.5);
+  --modal-bg: rgba(10, 15, 30, 0.97);
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+  --msg-me-bg: linear-gradient(135deg, #2563eb, #4f46e5);
+  --msg-them-bg: rgba(30, 41, 59, 0.9);
+  --msg-me-text: #ffffff;
+  --msg-them-text: #ffffff;
+  --icon-color: #cbd5e1;
+  --scrollbar-thumb: rgba(108, 62, 244, 0.4);
+  --msg-sender-name: #a7f3d0;
+  --text-success-soft: #a7f3d0;
+
+  /* ── Brand colours ───────────────────────────────── */
   --primary-blue: #1857c8;
   --primary-cyan: #45d8f1;
   --primary-purple: #6c3ef4;
@@ -12,7 +44,127 @@
   --neon-blue: 0 0 15px rgba(24, 87, 200, 0.6), inset 0 0 10px rgba(24, 87, 200, 0.2);
   --neon-cyan: 0 0 15px rgba(69, 216, 241, 0.6), inset 0 0 10px rgba(69, 216, 241, 0.2);
   --neon-purple: 0 0 20px rgba(108, 62, 244, 0.6), inset 0 0 15px rgba(108, 62, 244, 0.2);
+
+  /* ── Chat theme (neutral default) ───────────────── */
+  --chat-accent: #3b82f6;
+  --chat-accent-hover: #2563eb;
+  --chat-bubble-me: linear-gradient(135deg, #2563eb, #4f46e5);
+  --chat-bubble-them: rgba(30, 41, 59, 0.9);
+  --chat-composer-border: rgba(255,255,255,0.1);
+  --chat-send-btn: #3b82f6;
 }
+
+/* ── Light Mode ──────────────────────────────────────────────────────────── */
+[data-appearance="light"] {
+  color-scheme: light;
+  --bg-main: #f0f4f8;
+  --bg-space: #e2e8f0;
+  --bg-page: #f0f4f8;
+  --bg-surface: rgba(255, 255, 255, 0.9);
+  --bg-panel: rgba(248, 250, 252, 0.97);
+  --bg-elevated: #ffffff;
+  --bg-inset: rgba(15, 23, 42, 0.05);
+  --bg-header: rgba(255, 255, 255, 0.85);
+  --surface-hover: rgba(15, 23, 42, 0.05);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-dim: #475569;
+  --text-bright: #1e293b;
+  --text-muted: #64748b;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --border-accent: rgba(108, 62, 244, 0.25);
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --input-border: rgba(0, 0, 0, 0.16);
+  --sidebar-bg: rgba(248, 250, 252, 0.98);
+  --chat-bg: rgba(240, 244, 248, 0.95);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --modal-bg: rgba(255, 255, 255, 0.98);
+  --overlay-bg: rgba(15, 23, 42, 0.45);
+  --msg-me-bg: linear-gradient(135deg, #2563eb, #4f46e5);
+  --msg-them-bg: rgba(255, 255, 255, 0.95);
+  --msg-me-text: #ffffff;
+  --msg-them-text: #0f172a;
+  --icon-color: #475569;
+  --msg-sender-name: #047857;
+  --text-success-soft: #047857;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(108, 62, 244, 0.15);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb: rgba(108, 62, 244, 0.3);
+  --chat-composer-border: rgba(0,0,0,0.1);
+}
+
+[data-appearance="light"] body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+[data-appearance="light"] h1,
+[data-appearance="light"] h2,
+[data-appearance="light"] h3,
+[data-appearance="light"] h4 {
+  color: var(--text-primary);
+}
+[data-appearance="light"] p {
+  color: var(--text-secondary);
+}
+
+/* Scrollbars follow the theme in both modes */
+:root ::-webkit-scrollbar-track { background: transparent; }
+:root ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+
+/* Form controls must never render dark-on-dark (or light-on-light) */
+:root input, :root textarea, :root select {
+  color-scheme: inherit;
+}
+:root input::placeholder, :root textarea::placeholder { color: var(--text-muted); }
+
+/* Tailwind hover/focus utilities used across the app need light-mode values */
+[data-appearance="light"] .hover\:bg-white\/5:hover { background-color: rgba(15, 23, 42, 0.06) !important; }
+[data-appearance="light"] .hover\:bg-white\/10:hover { background-color: rgba(15, 23, 42, 0.10) !important; }
+[data-appearance="light"] .focus\:bg-white\/10:focus { background-color: rgba(15, 23, 42, 0.06) !important; }
+[data-appearance="light"] .hover\:text-white:hover { color: var(--text-primary) !important; }
+[data-appearance="light"] .focus\:border-blue-500\/50:focus { border-color: rgba(59, 130, 246, 0.6) !important; }
+
+/* ── Chat Themes ─────────────────────────────────────────────────────────── */
+[data-chat-theme="teal"] {
+  --chat-accent: #0d9488;
+  --chat-accent-hover: #0f766e;
+  --chat-bubble-me: linear-gradient(135deg, #0d9488, #0891b2);
+  --chat-send-btn: #0d9488;
+}
+[data-chat-theme="coral"] {
+  --chat-accent: #f43f5e;
+  --chat-accent-hover: #e11d48;
+  --chat-bubble-me: linear-gradient(135deg, #f43f5e, #f97316);
+  --chat-send-btn: #f43f5e;
+}
+[data-chat-theme="purple"] {
+  --chat-accent: #8b5cf6;
+  --chat-accent-hover: #7c3aed;
+  --chat-bubble-me: linear-gradient(135deg, #8b5cf6, #6c3ef4);
+  --chat-send-btn: #8b5cf6;
+}
+[data-chat-theme="green"] {
+  --chat-accent: #10b981;
+  --chat-accent-hover: #059669;
+  --chat-bubble-me: linear-gradient(135deg, #10b981, #06b6d4);
+  --chat-send-btn: #10b981;
+}
+[data-chat-theme="neutral"] {
+  --chat-accent: #3b82f6;
+  --chat-accent-hover: #2563eb;
+  --chat-bubble-me: linear-gradient(135deg, #2563eb, #4f46e5);
+  --chat-send-btn: #3b82f6;
+}
+
+/* ── Wallpaper Presets ───────────────────────────────────────────────────── */
+.wp-grid { background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Cpath d='M40 0H0v40'/%3E%3C/g%3E%3C/svg%3E"); }
+.wp-dots { background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px); background-size: 24px 24px; }
+.wp-hexagon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66z' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='1'/%3E%3C/svg%3E"); }
+.wp-circuit { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='10' cy='10' r='2' fill='rgba(59,130,246,0.2)'/%3E%3Ccircle cx='90' cy='90' r='2' fill='rgba(59,130,246,0.2)'/%3E%3Cline x1='10' y1='10' x2='90' y2='10' stroke='rgba(59,130,246,0.1)' stroke-width='1'/%3E%3Cline x1='90' y1='10' x2='90' y2='90' stroke='rgba(59,130,246,0.1)' stroke-width='1'/%3E%3C/svg%3E"); }
+.wp-waves { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 0, transparent 50%); background-size: 20px 20px; }
+
 
 .premium-glass {
   background: var(--glass-bg);
@@ -35,6 +187,38 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 8px rgba(69, 216, 241, 0.4));
+}
+
+/* White-to-cyan logo gradient is invisible on light backgrounds */
+[data-appearance="light"] .holographic-text {
+  background: linear-gradient(to right, #1857c8, #0d9488);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: none;
+}
+
+/* ── Auth page light mode ──────────────────────────────── */
+[data-appearance="light"] .aurora-bg {
+  background:
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.12), transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.1), transparent 40%),
+    var(--bg-main);
+}
+[data-appearance="light"] .input-group {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+}
+[data-appearance="light"] .input-group input {
+  color: var(--text-primary);
+  text-shadow: none;
+}
+[data-appearance="light"] input:-webkit-autofill,
+[data-appearance="light"] input:-webkit-autofill:hover,
+[data-appearance="light"] input:-webkit-autofill:focus,
+[data-appearance="light"] input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #f0f4f8 inset !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
 }
 
 .editorial-heading {
@@ -1028,6 +1212,10 @@ footer {
   padding: 20px;
 }
 
+.auth-page-container h2,
+.auth-page-container h3 { color: var(--text-primary); }
+.auth-page-container p { color: var(--text-secondary); }
+
 .auth-form-wrapper {
   opacity: 0;
   transform: translateY(20px);
@@ -1730,3 +1918,41 @@ input:-webkit-autofill:active {
   }
 }
 
+/* ── Light mode: late overrides for auth + duplicate class blocks ──
+   These come last so they beat the dark !important rules above. */
+[data-appearance="light"] .auth-card {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+[data-appearance="light"] .auth-header h2 {
+  color: var(--text-primary) !important;
+}
+[data-appearance="light"] .auth-header p,
+[data-appearance="light"] .auth-toggle {
+  color: var(--text-secondary) !important;
+}
+[data-appearance="light"] .input-group {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+}
+[data-appearance="light"] .input-group:focus-within {
+  background: var(--input-bg) !important;
+}
+[data-appearance="light"] .input-group input,
+[data-appearance="light"] .input-group select {
+  color: var(--text-primary) !important;
+  text-shadow: none;
+}
+[data-appearance="light"] .input-group input::placeholder {
+  color: var(--text-muted);
+}
+[data-appearance="light"] .glass-card {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+/* The matrix rain paints a black trail layer designed for dark backgrounds;
+   hide it in light mode. The Matrix Rain setting still works in dark mode. */
+[data-appearance="light"] .ll-matrix-rain {
+  display: none !important;
+}

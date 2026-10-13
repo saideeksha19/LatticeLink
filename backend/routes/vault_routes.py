@@ -380,3 +380,17 @@ def delete_file(file_id):
     db.session.commit()
     
     return jsonify({'message': 'File deleted successfully'}), 200
+
+
+@vault_bp.route('/wallpapers/<filename>', methods=['GET'])
+@token_required
+def serve_wallpaper(filename):
+    """Serve user-uploaded wallpaper images. Auth required; no path traversal."""
+    import re
+    if not re.match(r'^wp_\d+_[a-f0-9]+\.(jpg|png|gif|webp)$', filename):
+        return jsonify({'error': 'Not found'}), 404
+    wallpaper_dir = os.path.join(Config.UPLOAD_FOLDER, 'wallpapers')
+    filepath = os.path.join(wallpaper_dir, filename)
+    if not os.path.isfile(filepath):
+        return jsonify({'error': 'Not found'}), 404
+    return send_file(filepath)

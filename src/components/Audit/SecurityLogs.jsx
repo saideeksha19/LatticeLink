@@ -36,9 +36,9 @@ const SecurityLogs = () => {
   };
 
   return (
-    <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h3 style={{ color: 'white', margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <List size={20} color="#10b981"/> Security & Compliance Logs
         </h3>
         
@@ -50,10 +50,10 @@ const SecurityLogs = () => {
               placeholder="Search logs..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px 8px 36px', borderRadius: '8px', fontSize: '14px', width: '200px' }}
+              style={{ background: 'var(--bg-inset)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', padding: '8px 12px 8px 36px', borderRadius: '8px', fontSize: '14px', width: '200px' }}
             />
           </div>
-          <button style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+          <button style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-primary)', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             <Filter size={16} /> Filter
           </button>
           <button onClick={handleExport} style={{ background: '#10b981', border: 'none', color: '#020617', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -66,26 +66,26 @@ const SecurityLogs = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>Timestamp</th>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>Severity</th>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>Category</th>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>User</th>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>Description</th>
-              <th style={{ padding: '12px', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>Status</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Timestamp</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Severity</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Category</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>User</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Description</th>
+              <th style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {logs.filter(l => l.desc.toLowerCase().includes(searchTerm.toLowerCase())).map((log, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                <td style={{ padding: '16px 12px', color: '#94a3b8', fontSize: '13px', fontFamily: 'monospace' }}>{log.time}</td>
+              <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '16px 12px', color: 'var(--text-dim)', fontSize: '13px', fontFamily: 'monospace' }}>{log.time}</td>
                 <td style={{ padding: '16px 12px' }}>
                   <span style={{ color: getLevelColor(log.level), fontSize: '12px', fontWeight: 'bold', background: `${getLevelColor(log.level)}20`, padding: '4px 8px', borderRadius: '4px' }}>
                     {log.level}
                   </span>
                 </td>
-                <td style={{ padding: '16px 12px', color: '#e2e8f0', fontSize: '13px' }}>{log.category}</td>
-                <td style={{ padding: '16px 12px', color: 'white', fontSize: '13px', fontWeight: 'bold' }}>{log.user}</td>
-                <td style={{ padding: '16px 12px', color: '#e2e8f0', fontSize: '13px' }}>{log.desc}</td>
+                <td style={{ padding: '16px 12px', color: 'var(--text-bright)', fontSize: '13px' }}>{log.category}</td>
+                <td style={{ padding: '16px 12px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold' }}>{log.user}</td>
+                <td style={{ padding: '16px 12px', color: 'var(--text-bright)', fontSize: '13px' }}>{log.desc}</td>
                 <td style={{ padding: '16px 12px' }}>
                   <span style={{ color: log.status === 'Success' || log.status === 'Resolved' ? '#10b981' : '#ef4444', fontSize: '13px', fontWeight: 'bold' }}>
                     {log.status}

@@ -470,7 +470,16 @@ def get_history(conversation_id):
             return jsonify({'error': 'Forbidden'}), 403
 
     messages = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.timestamp.asc()).all()
-    return jsonify({'messages': [m.to_dict() for m in messages]}), 200
+    result = []
+    for m in messages:
+        msg_dict = m.to_dict()
+        if m.type == 'poll' and m.id:
+            from models import Poll
+            poll = Poll.query.filter_by(message_id=m.id).first()
+            if poll:
+                msg_dict['poll'] = poll.to_dict(requesting_username=current_user.username)
+        result.append(msg_dict)
+    return jsonify({'messages': result}), 200
 
 @chat_bp.route('/chats', methods=['GET'])
 @token_required

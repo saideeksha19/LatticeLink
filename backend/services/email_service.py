@@ -25,6 +25,13 @@ class SMTPSendError(Exception):
     pass
 
 
+def is_production_environment() -> bool:
+    """Returns True if running in a production deployment (e.g. Render)."""
+    flask_env = os.getenv("FLASK_ENV", "").strip().lower()
+    is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+    return flask_env == "production" or is_render
+
+
 def _get_agentmail_config():
     """
     Read the AgentMail configuration from environment variables only.

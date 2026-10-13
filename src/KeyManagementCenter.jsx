@@ -8,7 +8,7 @@ import SHA3IdentityCenter from './components/KeyManagement/SHA3IdentityCenter';
 
 /* ─── Tab Header ─── */
 const TabBar = ({ tabs, activeTab, onTabChange }) => (
-  <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>
+  <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '24px', overflowX: 'auto' }}>
     {tabs.map((tab) => {
       const isActive = activeTab === tab.id;
       return (
@@ -49,14 +49,14 @@ const KeyDashboardOverview = () => {
           { label: 'AES-256-GCM', status: 'ACTIVE', color: '#3b82f6', icon: Lock },
           { label: 'SHA3-512', status: 'ACTIVE', color: '#f59e0b', icon: Fingerprint }
         ].map((algo, i) => (
-          <div key={i} className="glass-card" style={{ padding: '24px', background: 'rgba(15, 23, 42, 0.6)', border: `1px solid ${algo.color}30`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div key={i} className="glass-card" style={{ padding: '24px', background: 'var(--bg-surface)', border: `1px solid ${algo.color}30`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${algo.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <algo.icon size={20} color={algo.color} />
               </div>
               <span style={{ color: algo.color, fontSize: '11px', fontWeight: 'bold', background: `${algo.color}15`, padding: '4px 8px', borderRadius: '4px' }}>{algo.status}</span>
             </div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}>{algo.label}</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '8px' }}>{algo.label}</div>
           </div>
         ))}
       </div>
@@ -64,12 +64,12 @@ const KeyDashboardOverview = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
         
         {/* Crypto History */}
-        <div className="glass-card" style={{ padding: '24px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h3 style={{ color: 'white', margin: '0 0 20px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-card" style={{ padding: '24px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          <h3 style={{ color: 'var(--text-primary)', margin: '0 0 20px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Clock size={18} color="#3b82f6"/> Cryptographic History
           </h3>
           <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '11px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(255,255,255,0.05)' }}></div>
+            <div style={{ position: 'absolute', left: '11px', top: '10px', bottom: '10px', width: '2px', background: 'var(--surface-hover)' }}></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[
                 { time: '09:10', event: 'ML-KEM Keypair Generated', color: '#8b5cf6' },
@@ -81,7 +81,7 @@ const KeyDashboardOverview = () => {
                   <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: `${ev.color}22`, border: `2px solid ${ev.color}`, marginTop: '2px', flexShrink: 0 }}></div>
                   <div>
                     <div style={{ color: ev.color, fontSize: '11px', fontWeight: 'bold' }}>{ev.time}</div>
-                    <div style={{ color: 'white', fontSize: '13px' }}>{ev.event}</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{ev.event}</div>
                   </div>
                 </div>
               ))}
@@ -91,25 +91,25 @@ const KeyDashboardOverview = () => {
 
         {/* Security Policies */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div className="glass-card" style={{ padding: '24px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h3 style={{ color: 'white', margin: '0 0 20px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="glass-card" style={{ padding: '24px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 20px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ShieldAlert size={18} color="#ef4444"/> Security Policies
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Auto Rotate</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Auto Rotate</span>
                 <span style={{ color: '#10b981', fontSize: '13px', fontWeight: 'bold' }}>ON</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Session Lifetime</span>
-                <span style={{ color: 'white', fontSize: '13px', fontWeight: 'bold' }}>24 Hours</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Session Lifetime</span>
+                <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold' }}>24 Hours</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Key Backup</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Key Backup</span>
                 <span style={{ color: '#10b981', fontSize: '13px', fontWeight: 'bold' }}>Enabled</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Verification</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: '13px' }}>Verification</span>
                 <span style={{ color: '#f59e0b', fontSize: '13px', fontWeight: 'bold' }}>Required</span>
               </div>
             </div>
@@ -140,10 +140,10 @@ const KeyManagementCenter = () => {
       <div style={{ padding: '32px', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <h1 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Key size={32} color="#8b5cf6" /> Cryptographic Key Management
             </h1>
-            <p style={{ color: '#94a3b8', margin: 0 }}>Inspect, manage, and rotate all post-quantum cryptographic material.</p>
+            <p style={{ color: 'var(--text-dim)', margin: 0 }}>Inspect, manage, and rotate all post-quantum cryptographic material.</p>
           </div>
         </div>
 

@@ -114,3 +114,73 @@ def verify_otp(candidate_otp: str, stored_salt: str, stored_hash: str) -> bool:
         return False
     computed_hash = hmac.new(stored_salt.encode('utf-8'), candidate_otp.strip().encode('utf-8'), hashlib.sha256).hexdigest()
     return hmac.compare_digest(computed_hash, stored_hash)
+
+
+# --- Authentication Credential Validators & Hashers ---
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """
+    Validates password strength:
+    - Minimum 8 characters.
+    - Must contain at least one character and not be purely whitespace.
+    """
+    if not password:
+        return False, "Password cannot be empty."
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    return True, ""
+
+
+def validate_security_pin(pin: str, password: str = None) -> tuple[bool, str]:
+    """
+    Validates 6-digit numeric security PIN:
+    - Exactly 6 numeric digits.
+    - Different from the password.
+    """
+    if not pin:
+        return False, "Security PIN is required."
+    clean_pin = str(pin).strip()
+    if len(clean_pin) != 6 or not clean_pin.isdigit():
+        return False, "Security PIN must be exactly 6 numeric digits."
+    if password and clean_pin == password:
+        return False, "Security PIN must be different from the password."
+    return True, ""
+
+
+def normalize_recovery_answer(answer: str) -> str:
+    """Consistently normalizes recovery question answer: stripped, lowercased, normalized whitespace."""
+    if not answer:
+        return ""
+    return " ".join(str(answer).strip().lower().split())
+
+
+def hash_recovery_answer(answer: str) -> str:
+    """
+    Securely hashes normalized recovery question answer using random salt and HMAC-SHA256.
+    Never stores plaintext answers.
+    """
+    normalized = normalize_recovery_answer(answer)
+    if not normalized:
+        return ""
+    salt = secrets.token_hex(16)
+    computed_hash = hmac.new(salt.encode('utf-8'), normalized.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{salt}:{computed_hash}"
+
+
+def verify_recovery_answer(candidate_answer: str, stored_hash_str: str) -> bool:
+    """Verifies candidate recovery answer against stored hash."""
+    if not candidate_answer or not stored_hash_str:
+        return False
+    normalized = normalize_recovery_answer(candidate_answer)
+    try:
+        if ":" in stored_hash_str:
+            salt, target_hash = stored_hash_str.split(":", 1)
+            computed = hmac.new(salt.encode('utf-8'), normalized.encode('utf-8'), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(computed, target_hash)
+        else:
+            # Fallback legacy raw SHA-256
+            legacy = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+            return hmac.compare_digest(legacy, stored_hash_str)
+    except Exception:
+        return False
+

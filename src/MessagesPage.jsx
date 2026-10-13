@@ -3,7 +3,8 @@ import {
   Search, Paperclip, Mic, Send, MoreVertical, Phone, Video,
   ShieldCheck, UserPlus, X, CheckCheck, Lock, PhoneOff, Camera,
   Fingerprint, Box, Shield, User, Mail, Hash, Clock, RefreshCw,
-  MessageSquare, Info, Smile, Bell, Users, Plus, Trash2, StopCircle
+  MessageSquare, Info, Smile, Bell, Users, Plus, Trash2, StopCircle, BarChart2,
+  Palette
 } from 'lucide-react';
 import MatrixRain from './MatrixRain';
 import { useAuth } from './context/AuthContext';
@@ -16,17 +17,22 @@ import MultiDeviceVisualizer from './components/MultiDeviceVisualizer';
 import CallOverlay from './components/CallOverlay';
 import IncomingCallModal from './components/IncomingCallModal';
 import FileMessageCard from './components/FileMessageCard';
+import PollCard from './components/PollCard';
+import PollCreationModal from './components/PollCreationModal';
+import ChatAppearancePanel, { THEMES as CHAT_THEMES, resolveWallpaperStyle } from './components/ChatAppearance';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MessagesPage = () => {
   const { currentUser } = useAuth();
   const { getContacts, addContact, searchUser, sendContactRequest, acceptContactRequest, rejectContactRequest, getPendingRequests, allUsers } = useUser();
-  const { socket, messages, chatList, fetchChats, sendMessage, sendFileMessage, editMessage, deleteMessage, markAsRead, logCall, getConversationId, presences, typingUsers, sendTyping, fetchHistory, calls, clearUnread, groups, createGroup, sendGroupMessage } = useChat();
+  const { socket, messages, chatList, fetchChats, sendMessage, sendFileMessage, editMessage, deleteMessage, markAsRead, logCall, getConversationId, presences, typingUsers, sendTyping, fetchHistory, calls, clearUnread, groups, createGroup, sendGroupMessage, updatePollInMessages, addMessageLocal } = useChat();
   const { pushNotification } = useSettings();
 
   const [activeSidebarTab, setActiveSidebarTab] = useState('chats'); // 'chats' | 'groups' | 'contacts' | 'calls'
   const [selectedChatId, setSelectedChatId] = useState('');
   const [showSecurityPanel, setShowSecurityPanel] = useState(false);
+  const [showAppearancePanel, setShowAppearancePanel] = useState(false);
+  const [chatAppearance, setChatAppearance] = useState(null);
 
   // New Chat & Group creation modal states
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -58,12 +64,32 @@ const MessagesPage = () => {
   const audioStreamRef = useRef(null);
   const [sendingState, setSendingState] = useState(null);
 
+  // Poll modal state
+  const [showPollModal, setShowPollModal] = useState(false);
+
   const contacts = getContacts(currentUser?.username) || [];
   const pendingRequests = getPendingRequests(currentUser?.username) || [];
   const activeGroup = (groups || []).find(g => g.id === selectedChatId) || null;
   const activeContact = (activeGroup ? { username: activeGroup.name, isGroup: true, group: activeGroup } : null) || contacts.find(c => c.username === selectedChatId) || (allUsers && allUsers[selectedChatId] ? allUsers[selectedChatId] : null) || (selectedChatId ? { username: selectedChatId, status: presences[selectedChatId] || 'offline' } : null);
   const activeConvId = selectedChatId ? (activeGroup ? activeGroup.id : getConversationId(currentUser?.username, selectedChatId)) : null;
   const activeMessages = activeConvId && messages[activeConvId] ? messages[activeConvId] : [];
+
+  // Load this conversation's saved theme + wallpaper (per-user, per-conversation)
+  useEffect(() => {
+    if (!activeConvId || !currentUser?.session_token) {
+      setChatAppearance(null);
+      return;
+    }
+    let cancelled = false;
+    setChatAppearance(null);
+    fetch(`/api/chat/custom/${activeConvId}`, {
+      headers: { Authorization: `Bearer ${currentUser.session_token}` },
+    })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (!cancelled && data) setChatAppearance(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeConvId, currentUser?.session_token]);
 
   useEffect(() => {
     if (activeConvId) {
@@ -108,6 +134,28 @@ const MessagesPage = () => {
   }, [editMessage, deleteMessage]);
 
   if (!currentUser) return null;
+
+  // --- Poll handler ---
+  const handlePollCreated = (data) => {
+    // Inject the created poll immediately for the creator (no socket latency,
+    // and resilient if the server-side socket emit failed). addMessageLocal
+    // dedupes by id, so the socket echo of the same message is ignored.
+    if (!data?.poll || !activeConvId) { setShowPollModal(false); return; }
+    const pollMsg = {
+      id: data.message_id || `poll_${Date.now()}`,
+      conversation_id: activeConvId,
+      sender: currentUser.username,
+      receiver: activeGroup ? activeGroup.id : (activeConvId.split('-').find(p => p !== currentUser.username) || activeConvId),
+      group_id: activeGroup ? activeGroup.id : undefined,
+      type: 'poll',
+      poll: data.poll,
+      text: `📊 ${data.poll.question}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent'
+    };
+    if (addMessageLocal) addMessageLocal(activeConvId, pollMsg);
+    setShowPollModal(false);
+  };
 
   // --- Handlers ---
   const handleSend = (e) => {
@@ -320,20 +368,20 @@ const MessagesPage = () => {
   // --- Render Components ---
 
   const renderLeftSidebar = () => (
-    <div style={{ width: '340px', display: 'flex', flexDirection: 'column', background: 'rgba(10, 15, 30, 0.65)', backdropFilter: 'blur(16px)', borderRight: '1px solid rgba(255,255,255,0.05)', zIndex: 20 }}>
+    <div style={{ width: '340px', display: 'flex', flexDirection: 'column', background: 'var(--sidebar-bg)', backdropFilter: 'blur(16px)', borderRight: '1px solid var(--border-subtle)', zIndex: 20 }}>
       {/* Sidebar Header (WhatsApp Style) */}
-      <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ padding: '12px 16px', background: 'var(--bg-inset)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>
             {currentUser.username.charAt(0)}
           </div>
-          <span style={{ fontWeight: '600', color: 'white' }}>{currentUser.username}</span>
+          <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{currentUser.username}</span>
         </div>
-        <div style={{ display: 'flex', gap: '12px', color: '#94a3b8' }}>
-          <MessageSquare size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'chats' ? '#3b82f6' : '#94a3b8' }} onClick={() => setActiveSidebarTab('chats')} title="Chats" />
-          <Users size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'groups' ? '#8b5cf6' : '#94a3b8' }} onClick={() => setActiveSidebarTab('groups')} title="Group Chats" />
-          <UserPlus size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'contacts' ? '#10b981' : '#94a3b8' }} onClick={() => setActiveSidebarTab('contacts')} title="Contacts" />
-          <Phone size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'calls' ? '#f59e0b' : '#94a3b8' }} onClick={() => setActiveSidebarTab('calls')} title="Calls" />
+        <div style={{ display: 'flex', gap: '12px', color: 'var(--text-dim)' }}>
+          <MessageSquare size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'chats' ? '#3b82f6' : 'var(--text-dim)' }} onClick={() => setActiveSidebarTab('chats')} title="Chats" />
+          <Users size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'groups' ? '#8b5cf6' : 'var(--text-dim)' }} onClick={() => setActiveSidebarTab('groups')} title="Group Chats" />
+          <UserPlus size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'contacts' ? '#10b981' : 'var(--text-dim)' }} onClick={() => setActiveSidebarTab('contacts')} title="Contacts" />
+          <Phone size={20} style={{ cursor: 'pointer', color: activeSidebarTab === 'calls' ? '#f59e0b' : 'var(--text-dim)' }} onClick={() => setActiveSidebarTab('calls')} title="Calls" />
         </div>
       </div>
 
@@ -342,14 +390,14 @@ const MessagesPage = () => {
         {activeSidebarTab === 'chats' && (
           <>
             <div style={{ padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div className="input-group" style={{ flex: 1, padding: '8px 16px', background: 'rgba(0,0,0,0.4)', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Search size={16} color="#64748b" />
+              <div className="input-group" style={{ flex: 1, padding: '8px 16px', background: 'var(--input-bg)', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Search size={16} color="var(--text-muted)" />
                 <input 
                   type="text" 
                   value={chatSearchQuery} 
                   onChange={(e) => setChatSearchQuery(e.target.value)} 
                   placeholder="Search secure chats..." 
-                  style={{ fontSize: '14px', background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }} 
+                  style={{ fontSize: '14px', background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', width: '100%' }} 
                 />
               </div>
               <button
@@ -387,12 +435,12 @@ const MessagesPage = () => {
 
               if (displayChats.length === 0) {
                 return (
-                  <div style={{ padding: '32px 24px', color: '#64748b', fontSize: '13px', textAlign: 'center' }}>
+                  <div style={{ padding: '32px 24px', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>
                     {chatSearchQuery.trim() ? (
                       "No connected contacts match your search."
                     ) : (
                       <>
-                        <div style={{ marginBottom: '8px', color: '#94a3b8', fontWeight: '500' }}>No connected contacts yet</div>
+                        <div style={{ marginBottom: '8px', color: 'var(--text-dim)', fontWeight: '500' }}>No connected contacts yet</div>
                         <div>Go to the <b>Contacts</b> tab or click <b>+</b> to send connection requests to users.</div>
                       </>
                     )}
@@ -407,19 +455,19 @@ const MessagesPage = () => {
                   style={{
                     padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
                     background: selectedChatId === chat.partner ? 'rgba(59,130,246,0.15)' : 'transparent',
-                    borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'all 0.2s'
+                    borderBottom: '1px solid var(--border-subtle)', transition: 'all 0.2s'
                   }}
                   className="hover:bg-white/5"
                 >
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #10b981)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold', fontSize: '18px', position: 'relative' }}>
                     {chat.displayName ? chat.displayName.charAt(0) : chat.partner.charAt(0)}
-                    <div style={{ position: 'absolute', bottom: '0px', right: '0px', width: '12px', height: '12px', borderRadius: '50%', background: chat.online || presences[chat.partner] === 'ONLINE' ? '#10b981' : '#64748b', border: '2px solid #0f172a' }}></div>
+                    <div style={{ position: 'absolute', bottom: '0px', right: '0px', width: '12px', height: '12px', borderRadius: '50%', background: chat.online || presences[chat.partner] === 'ONLINE' ? '#10b981' : 'var(--text-muted)', border: '2px solid var(--sidebar-bg)' }}></div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>{chat.displayName || chat.partner}</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px' }}>{chat.displayName || chat.partner}</span>
                       {chat.lastMessageTime && (
-                        <span style={{ color: '#64748b', fontSize: '11px' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                           {new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
@@ -428,9 +476,9 @@ const MessagesPage = () => {
                       <div style={{ color: '#3b82f6', fontSize: '13px', fontStyle: 'italic' }}>typing...</div>
                     ) : (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ color: '#94a3b8', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                           {chat.lastSender === currentUser.username && (
-                            <CheckCheck size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle', color: '#94a3b8' }} />
+                            <CheckCheck size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle', color: 'var(--text-dim)' }} />
                           )}
                           {chat.lastMessage || <i>Click to start chat</i>}
                         </div>
@@ -451,7 +499,7 @@ const MessagesPage = () => {
         {activeSidebarTab === 'groups' && (
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ color: 'white', margin: 0, fontSize: '15px' }}>Group Channels</h3>
+              <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '15px' }}>Group Channels</h3>
               <button 
                 onClick={() => setShowCreateGroup(true)}
                 style={{ background: '#8b5cf6', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -461,7 +509,7 @@ const MessagesPage = () => {
             </div>
 
             {groups.length === 0 ? (
-              <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px', background: 'var(--surface-hover)', borderRadius: '12px' }}>
                 No group chats created yet. Click "New Group" to create a quantum encrypted group channel.
               </div>
             ) : (
@@ -471,16 +519,16 @@ const MessagesPage = () => {
                   onClick={() => setSelectedChatId(group.id)}
                   style={{
                     padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', marginBottom: '8px',
-                    background: selectedChatId === group.id ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)'
+                    background: selectedChatId === group.id ? 'rgba(139,92,246,0.15)' : 'var(--surface-hover)',
+                    border: '1px solid var(--border-subtle)'
                   }}
                 >
                   <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>
                     <Users size={20} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{group.name}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{group.name}</div>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {group.members?.length || 0} members • {group.lastMessage || group.description}
                     </div>
                   </div>
@@ -492,27 +540,27 @@ const MessagesPage = () => {
 
         {activeSidebarTab === 'contacts' && (
           <div style={{ padding: '16px' }}>
-            <h3 style={{ color: 'white', margin: '0 0 16px', fontSize: '15px' }}>Add Contact</h3>
+            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 16px', fontSize: '15px' }}>Add Contact</h3>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-              <div className="input-group" style={{ flex: 1, padding: '8px 12px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px' }}>
-                <Search size={14} color="#64748b" />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search Username..." style={{ fontSize: '13px', background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }} onKeyDown={(e) => e.key === 'Enter' && handleContactSearch()} />
+              <div className="input-group" style={{ flex: 1, padding: '8px 12px', background: 'var(--input-bg)', borderRadius: '12px' }}>
+                <Search size={14} color="var(--text-muted)" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search Username..." style={{ fontSize: '13px', background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', width: '100%' }} onKeyDown={(e) => e.key === 'Enter' && handleContactSearch()} />
               </div>
               <button onClick={handleContactSearch} style={{ background: '#3b82f6', border: 'none', color: 'white', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer' }}>Search</button>
             </div>
             
             {showSearch && searchResults.length > 0 && searchResults.map(user => (
-              <div key={user.username} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '8px' }}>
+              <div key={user.username} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--surface-hover)', borderRadius: '12px', marginBottom: '8px' }}>
                 <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #10b981)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>{user.username.charAt(0)}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{user.username}</div>
-                  <div style={{ color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>{user.nodeId}</div>
+                  <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{user.username}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'monospace' }}>{user.nodeId}</div>
                 </div>
                 <button onClick={() => { sendContactRequest(currentUser.username, user.username); setShowSearch(false); setSearchQuery(''); pushNotification(`Request sent to ${user.username}`, 'info'); }} style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}>Add</button>
               </div>
             ))}
             {showSearch && searchResults.length === 0 && (
-              <div style={{ padding: '12px', color: '#94a3b8', fontSize: '13px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '8px' }}>
+              <div style={{ padding: '12px', color: 'var(--text-dim)', fontSize: '13px', textAlign: 'center', background: 'var(--surface-hover)', borderRadius: '12px', marginBottom: '8px' }}>
                 No users found.
               </div>
             )}
@@ -526,12 +574,12 @@ const MessagesPage = () => {
                   <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '12px', marginBottom: '8px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>{req.sender.charAt(0)}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{req.sender}</div>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>wants to connect</div>
+                      <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{req.sender}</div>
+                      <div style={{ color: 'var(--text-dim)', fontSize: '11px' }}>wants to connect</div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={async () => { await acceptContactRequest(req.id); pushNotification(`Accepted request from ${req.sender}`, 'success'); }} style={{ background: '#10b981', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Accept</button>
-                      <button onClick={async () => { await rejectContactRequest(req.id); pushNotification(`Rejected request from ${req.sender}`, 'info'); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#94a3b8', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Reject</button>
+                      <button onClick={async () => { await rejectContactRequest(req.id); pushNotification(`Rejected request from ${req.sender}`, 'info'); }} style={{ background: 'var(--surface-hover)', border: 'none', color: 'var(--text-dim)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Reject</button>
                     </div>
                   </div>
                 ))}
@@ -539,12 +587,12 @@ const MessagesPage = () => {
             )}
 
             {/* Global Directory User Discovery List */}
-            <h3 style={{ color: 'white', margin: '24px 0 16px', fontSize: '15px' }}>Discover Network Users</h3>
+            <h3 style={{ color: 'var(--text-primary)', margin: '24px 0 16px', fontSize: '15px' }}>Discover Network Users</h3>
             {(() => {
               const otherUsers = Object.values(allUsers || {}).filter(u => u.username !== currentUser.username);
               if (otherUsers.length === 0) {
                 return (
-                  <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: '16px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
                     No other users registered in directory yet. Use the search bar above or register another account to connect.
                   </div>
                 );
@@ -553,13 +601,13 @@ const MessagesPage = () => {
                 const isContact = contacts.some(c => c.username === u.username);
                 const hasPending = pendingRequests.some(r => r.sender === u.username || r.receiver === u.username);
                 return (
-                  <div key={u.username} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '8px' }}>
+                  <div key={u.username} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-hover)', border: '1px solid var(--border-subtle)', borderRadius: '12px', marginBottom: '8px' }}>
                     <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
                       {u.username.charAt(0)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{u.username}</div>
-                      <div style={{ color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>{u.nodeId?.substring(0, 14)}...</div>
+                      <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{u.username}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'monospace' }}>{u.nodeId?.substring(0, 14)}...</div>
                     </div>
                     {isContact ? (
                       <button onClick={() => { setSelectedChatId(u.username); setActiveSidebarTab('chats'); }} style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Chat</button>
@@ -579,9 +627,9 @@ const MessagesPage = () => {
               });
             })()}
 
-            <h3 style={{ color: 'white', margin: '24px 0 16px', fontSize: '15px' }}>Your Connected Contacts</h3>
+            <h3 style={{ color: 'var(--text-primary)', margin: '24px 0 16px', fontSize: '15px' }}>Your Connected Contacts</h3>
             {contacts.length === 0 ? (
-              <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: '12px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
                 No connected contacts yet. Click "+ Add" above to connect.
               </div>
             ) : (
@@ -589,8 +637,8 @@ const MessagesPage = () => {
                 <div key={contact.username} onClick={() => { setSelectedChatId(contact.username); setActiveSidebarTab('chats'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', cursor: 'pointer', borderRadius: '12px' }} className="hover:bg-white/5">
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #10b981)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' }}>{contact.username.charAt(0)}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: 'white', fontSize: '15px', fontWeight: '500' }}>{contact.username}</div>
-                    <div style={{ color: '#64748b', fontSize: '12px' }}>{contact.role}</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500' }}>{contact.username}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{contact.role}</div>
                   </div>
                 </div>
               ))
@@ -601,11 +649,11 @@ const MessagesPage = () => {
         {activeSidebarTab === 'calls' && (
           <div style={{ padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ color: 'white', margin: 0, fontSize: '15px' }}>Recent Calls</h3>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>{calls.length} logs</span>
+              <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '15px' }}>Recent Calls</h3>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{calls.length} logs</span>
             </div>
             {calls.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b', fontSize: '13px' }}>
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>
                 No recent calls recorded.
               </div>
             ) : (
@@ -614,12 +662,12 @@ const MessagesPage = () => {
                 const callTime = call.time || (call.timestamp ? (call.timestamp.includes('T') ? call.timestamp.split('T')[0] + ' ' + call.timestamp.split('T')[1].substring(0, 5) : call.timestamp) : 'Recent');
                 const callDuration = typeof call.duration === 'number' ? (call.duration > 0 ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '0:00') : (call.duration || '0:00');
                 return (
-                  <div key={call.id || i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="hover:bg-white/5 rounded-lg transition-colors">
+                  <div key={call.id || i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid var(--border-subtle)' }} className="hover:bg-white/5 rounded-lg transition-colors">
                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: call.status === 'missed' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {call.type === 'video' ? <Video size={18} color={call.status === 'missed' ? '#ef4444' : '#3b82f6'} /> : <Phone size={18} color={call.status === 'missed' ? '#ef4444' : '#3b82f6'} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'white', fontSize: '15px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{otherParty}</span>
                         {call.caller === currentUser?.username ? (
                           <span style={{ fontSize: '10px', color: '#38bdf8', background: 'rgba(56,189,248,0.1)', padding: '1px 6px', borderRadius: '4px' }}>Outgoing</span>
@@ -627,7 +675,7 @@ const MessagesPage = () => {
                           <span style={{ fontSize: '10px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '1px 6px', borderRadius: '4px' }}>Incoming</span>
                         )}
                       </div>
-                      <div style={{ color: call.status === 'missed' ? '#ef4444' : '#94a3b8', fontSize: '12px', display: 'flex', gap: '6px', marginTop: '2px' }}>
+                      <div style={{ color: call.status === 'missed' ? '#ef4444' : 'var(--text-dim)', fontSize: '12px', display: 'flex', gap: '6px', marginTop: '2px' }}>
                         <span>{callTime}</span> • <span>{call.status === 'missed' ? 'Missed' : `Duration: ${callDuration}`}</span>
                       </div>
                     </div>
@@ -644,20 +692,34 @@ const MessagesPage = () => {
   const renderActiveChat = () => {
     if (!activeContact) {
       return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', background: 'rgba(5, 8, 15, 0.9)', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', background: 'var(--chat-bg)', position: 'relative' }}>
           <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(59,130,246,0.4) 0%, transparent 50%)' }} />
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}>
              <ShieldCheck size={100} color="#3b82f6" style={{ margin: '0 auto 24px', filter: 'drop-shadow(0 0 20px rgba(59,130,246,0.5))' }} />
           </motion.div>
-          <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white', marginBottom: '12px' }}>Quantum Secure Messaging</h2>
-          <p style={{ color: '#94a3b8', maxWidth: '400px', textAlign: 'center' }}>End-to-end encrypted with ML-KEM and ML-DSA. Select a contact from the sidebar to establish a secure tunnel.</p>
+          <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '12px' }}>Quantum Secure Messaging</h2>
+          <p style={{ color: 'var(--text-dim)', maxWidth: '400px', textAlign: 'center' }}>End-to-end encrypted with ML-KEM and ML-DSA. Select a contact from the sidebar to establish a secure tunnel.</p>
         </div>
       );
     }
 
+    const themeDef = CHAT_THEMES[chatAppearance?.theme] || CHAT_THEMES.default;
+    const customWpUrl = chatAppearance?.wallpaper?.kind === 'image' && chatAppearance.wallpaper.value
+      ? `/api/chat/custom/wallpaper/${chatAppearance.wallpaper.value}?token=${encodeURIComponent(currentUser?.session_token || '')}`
+      : null;
+    const wallpaperStyle = resolveWallpaperStyle(chatAppearance?.wallpaper, customWpUrl);
+
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(5, 8, 15, 0.9)' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--chat-bg)', '--chat-accent': themeDef.accent, '--chat-accent2': themeDef.accent2, '--chat-bubble': themeDef.bubble }}>
         
+        {/* Custom wallpaper layer + readability scrim */}
+        {wallpaperStyle && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', ...wallpaperStyle }} />
+            <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', background: 'rgba(5, 8, 15, 0.55)' }} />
+          </>
+        )}
+
         {/* Chat Background Pattern */}
         <div style={{
            position: 'absolute', inset: 0, opacity: 0.03, pointerEvents: 'none', zIndex: 0,
@@ -665,29 +727,32 @@ const MessagesPage = () => {
         }} />
 
         {/* Header */}
-        <div style={{ padding: '12px 24px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+        <div style={{ padding: '12px 24px', background: 'var(--header-bg)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: activeGroup ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'linear-gradient(135deg, #3b82f6, #10b981)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold', fontSize: '18px' }}>
               {activeGroup ? <Users size={22} /> : activeContact.username.charAt(0)}
             </div>
             <div>
-              <h3 style={{ color: 'white', margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {activeGroup ? activeGroup.name : activeContact.username} <ShieldCheck size={14} color="#10b981" />
               </h3>
-              <div style={{ color: activeGroup ? '#8b5cf6' : (presences[activeContact.username]?.includes('Online') ? '#10b981' : '#64748b'), fontSize: '12px' }}>
+              <div style={{ color: activeGroup ? '#8b5cf6' : (presences[activeContact.username]?.includes('Online') ? '#10b981' : 'var(--text-muted)'), fontSize: '12px' }}>
                 {activeGroup ? `${activeGroup.members?.length || 0} members: ${activeGroup.members?.join(', ')}` : (typingUsers[activeContact.username] ? 'typing...' : (presences[activeContact.username] || (activeContact.status === 'online' ? 'Online' : 'Offline')))}
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '20px', color: '#cbd5e1' }}>
+          <div style={{ display: 'flex', gap: '20px', color: 'var(--text-secondary)', alignItems: 'center' }}>
+            <button title="Chat appearance" aria-label="Chat appearance" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }} onClick={() => setShowAppearancePanel(true)}>
+              <Palette size={20} color="var(--chat-accent, #3b82f6)" />
+            </button>
             <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }} onClick={() => setActiveCall({ type: 'audio', contact: activeContact?.username })}>
-              <Phone size={20} color="#3b82f6" />
+              <Phone size={20} color="var(--chat-accent, #3b82f6)" />
             </button>
             <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }} onClick={() => setActiveCall({ type: 'video', contact: activeContact?.username })}>
-              <Video size={20} color="#3b82f6" />
+              <Video size={20} color="var(--chat-accent, #3b82f6)" />
             </button>
-            <span style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></span>
-            <Info size={22} style={{ cursor: 'pointer', color: showSecurityPanel ? '#3b82f6' : '#cbd5e1' }} onClick={() => setShowSecurityPanel(!showSecurityPanel)} />
+            <span style={{ width: '1px', background: 'var(--border-strong)' }}></span>
+            <Info size={22} style={{ cursor: 'pointer', color: showSecurityPanel ? 'var(--chat-accent, #3b82f6)' : 'var(--text-secondary)' }} onClick={() => setShowSecurityPanel(!showSecurityPanel)} />
           </div>
         </div>
 
@@ -721,11 +786,11 @@ const MessagesPage = () => {
                     marginTop: isFirstInGroup ? '8px' : '2px'
                 }}>
                   <div style={{
-                    background: isEncrypting ? 'rgba(59,130,246,0.1)' : (isMe ? 'linear-gradient(135deg, #2563eb, #4f46e5)' : 'rgba(30, 41, 59, 0.9)'),
-                    border: isEncrypting ? '1px dashed #3b82f6' : (isMe ? 'none' : '1px solid rgba(255,255,255,0.05)'),
+                    background: isEncrypting ? 'rgba(59,130,246,0.1)' : (isMe ? 'var(--chat-bubble, var(--msg-me-bg))' : 'var(--msg-them-bg)'),
+                    border: isEncrypting ? '1px dashed var(--chat-accent, #3b82f6)' : (isMe ? 'none' : '1px solid var(--border-subtle)'),
                     padding: '8px 12px',
                     borderRadius: borderRadius,
-                    color: isEncrypting ? '#94a3b8' : 'white',
+                    color: isEncrypting ? 'var(--text-dim)' : (isMe ? 'var(--msg-me-text)' : 'var(--msg-them-text)'),
                     fontSize: '15px',
                     position: 'relative',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
@@ -737,11 +802,24 @@ const MessagesPage = () => {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {!isMe && activeGroup && (
-                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#a7f3d0', marginBottom: '2px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--msg-sender-name)', marginBottom: '2px' }}>
                             {msg.sender}
                           </span>
                         )}
-                        {msg.type === 'file' ? (
+                        {msg.type === 'poll' ? (
+                          <PollCard
+                            pollData={msg.poll}
+                            messageId={msg.id}
+                            isMe={isMe}
+                            sessionToken={currentUser?.session_token}
+                            currentUsername={currentUser?.username}
+                            onPollUpdate={(updatedPoll) => {
+                              if (updatePollInMessages && activeConvId) {
+                                updatePollInMessages(activeConvId, updatedPoll);
+                              }
+                            }}
+                          />
+                        ) : msg.type === 'file' ? (
                           <FileMessageCard 
                             message={msg} 
                             isMe={isMe} 
@@ -781,7 +859,7 @@ const MessagesPage = () => {
                         )}
                         
                         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                           <span style={{ fontSize: '10px', color: isMe ? 'rgba(255,255,255,0.7)' : '#94a3b8' }}>{msg.timestamp}</span>
+                           <span style={{ fontSize: '10px', color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--text-dim)' }}>{msg.timestamp}</span>
                            <span 
                              title="Inspect PQC Packet" 
                              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -803,7 +881,7 @@ const MessagesPage = () => {
            })}
            {sendingState && (
               <div style={{ alignSelf: 'flex-end', maxWidth: '65%' }}>
-                <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px dashed #3b82f6', padding: '8px 12px', borderRadius: '12px 0 12px 12px', color: '#94a3b8', fontSize: '14px' }}>
+                <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px dashed #3b82f6', padding: '8px 12px', borderRadius: '12px 0 12px 12px', color: 'var(--text-dim)', fontSize: '14px' }}>
                   {sendingState.text}
                 </div>
                 <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px', textAlign: 'right', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
@@ -815,9 +893,9 @@ const MessagesPage = () => {
         </div>
 
         {/* Input Bar */}
-        <div style={{ padding: '16px 24px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.05)', zIndex: 20, position: 'relative' }}>
+        <div style={{ padding: '16px 24px', background: 'var(--header-bg)', backdropFilter: 'blur(20px)', borderTop: '1px solid var(--border-subtle)', zIndex: 20, position: 'relative' }}>
            {showEmojiPicker && (
-             <div style={{ position: 'absolute', bottom: '85px', left: '24px', background: 'rgba(15,23,42,0.98)', backdropFilter: 'blur(16px)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px', zIndex: 60, boxShadow: '0 -10px 40px rgba(0,0,0,0.7)', maxHeight: '200px', overflowY: 'auto' }}>
+             <div style={{ position: 'absolute', bottom: '85px', left: '24px', background: 'var(--modal-bg)', backdropFilter: 'blur(16px)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '10px', zIndex: 60, boxShadow: '0 -10px 40px rgba(0,0,0,0.35)', maxHeight: '200px', overflowY: 'auto' }}>
                {['😀','😃','😄','😁','😆','😂','🤣','😊','😇','🥰','😍','🤩','😘','😋','😜','😎','🥳','😏','🤔','🤫','🤗','🫡','😴','🤯','🥳','👍','👎','👏','🙌','🫶','❤️','🔥','🎉','✨','🚀','💯','⭐','💡','🔒','🛡️','⚡','💻','📱','📸','🎥','🎵','🍔','🍕'].map(emoji => (
                  <button 
                    key={emoji} 
@@ -839,7 +917,7 @@ const MessagesPage = () => {
                  <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '15px', fontFamily: 'monospace' }}>
                    {formatRecordingTime(recordingDuration)}
                  </span>
-                 <span style={{ color: '#cbd5e1', fontSize: '13px' }}>Recording voice note...</span>
+                 <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Recording voice note...</span>
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                  <button 
@@ -864,14 +942,25 @@ const MessagesPage = () => {
              </div>
            ) : (
              <form onSubmit={handleSend} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-               <Smile size={24} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="hover:text-white transition-colors" />
+               <Smile size={24} color="var(--text-dim)" style={{ cursor: 'pointer' }} onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="hover:text-white transition-colors" />
                <input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
-               <Paperclip size={24} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()} className="hover:text-white transition-colors" />
+               <Paperclip size={24} color="var(--text-dim)" style={{ cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()} className="hover:text-white transition-colors" />
+                {/* Poll button */}
+                <button
+                  type="button"
+                  id="poll-create-btn"
+                  title="Create Poll"
+                  onClick={() => setShowPollModal(true)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0', color: showPollModal ? '#8b5cf6' : 'var(--text-dim)' }}
+                  className="hover:text-purple-400 transition-colors"
+                >
+                  <BarChart2 size={22} />
+                </button>
                
                <input
                  type="text" value={input} onChange={(e) => { setInput(e.target.value); sendTyping(selectedChatId, e.target.value.length > 0); }}
                  placeholder="Type a secure message..."
-                 style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '14px 20px', borderRadius: '30px', color: 'white', outline: 'none', fontSize: '15px', transition: 'all 0.2s' }}
+                 style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--input-border)', padding: '14px 20px', borderRadius: '30px', color: 'var(--text-primary)', outline: 'none', fontSize: '15px', transition: 'all 0.2s' }}
                  className="focus:bg-white/10 focus:border-blue-500/50"
                />
                
@@ -879,20 +968,30 @@ const MessagesPage = () => {
                  <button 
                    type="button" 
                    onClick={startRecording} 
-                   style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }}
-                   className="hover:bg-blue-600/30"
-                   title="Record Voice Note"
-                 >
-                   <Mic size={24} color="#94a3b8" />
+                  style={{ background: 'var(--surface-hover)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s' }}
+                  className="hover:bg-blue-600/30"
+                  title="Record Voice Note"
+                >
+                  <Mic size={24} color="var(--text-dim)" />
                  </button>
                ) : (
-                 <button type="submit" style={{ background: '#3b82f6', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0 20px rgba(59,130,246,0.5)', transition: '0.2s' }} className="hover:bg-blue-400 hover:scale-105">
+                 <button type="submit" style={{ background: 'var(--chat-accent, #3b82f6)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0 20px rgba(59,130,246,0.5)', transition: '0.2s' }} className="hover:bg-blue-400 hover:scale-105">
                    <Send size={20} color="white" style={{ marginLeft: '4px' }} />
                  </button>
                )}
              </form>
            )}
         </div>
+
+        {showAppearancePanel && (
+          <ChatAppearancePanel
+            conversationId={activeConvId}
+            token={currentUser?.session_token}
+            current={chatAppearance}
+            onClose={() => setShowAppearancePanel(false)}
+            onApply={(saved) => setChatAppearance(saved)}
+          />
+        )}
 
       </div>
     );
@@ -904,41 +1003,41 @@ const MessagesPage = () => {
     const sharedMedia = activeMessages.filter(msg => msg.image || msg.type === 'image' || msg.type === 'file');
 
     return (
-      <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: '320px', opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.3 }} style={{ background: 'rgba(10, 15, 30, 0.8)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '24px', overflowY: 'auto', zIndex: 20 }}>
+      <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: '320px', opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.3 }} style={{ background: 'var(--bg-panel)', backdropFilter: 'blur(20px)', borderLeft: '1px solid var(--border-subtle)', padding: '24px', overflowY: 'auto', zIndex: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h4 style={{ color: 'white', fontSize: '16px', margin: 0 }}>Contact Info</h4>
-          <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setShowSecurityPanel(false)} />
+          <h4 style={{ color: 'var(--text-primary)', fontSize: '16px', margin: 0 }}>Contact Info</h4>
+          <X size={20} color="var(--text-dim)" style={{ cursor: 'pointer' }} onClick={() => setShowSecurityPanel(false)} />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
           <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #10b981)', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold', fontSize: '40px', marginBottom: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
             {activeContact.username.charAt(0)}
           </div>
-          <div style={{ color: 'white', fontSize: '22px', fontWeight: 'bold' }}>{activeContact.username}</div>
-          <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '4px' }}>{activeContact.nodeId}</div>
+          <div style={{ color: 'var(--text-primary)', fontSize: '22px', fontWeight: 'bold' }}>{activeContact.username}</div>
+          <div style={{ color: 'var(--text-dim)', fontSize: '13px', marginTop: '4px' }}>{activeContact.nodeId}</div>
         </div>
 
-        <h4 style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Quantum Security</h4>
+        <h4 style={{ color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Quantum Security</h4>
         
         <div style={{ marginBottom: '16px', padding: '16px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px', textAlign: 'center' }}>
           <ShieldCheck size={24} color="#10b981" style={{ margin: '0 auto 8px' }} />
           <div style={{ color: '#10b981', fontSize: '14px', fontWeight: 'bold' }}>End-to-End Encrypted</div>
-          <div style={{ color: '#a7f3d0', fontSize: '12px', marginTop: '4px' }}>Nobody outside this chat, not even LatticeLink, can read or listen to them.</div>
+          <div style={{ color: 'var(--text-success-soft)', fontSize: '12px', marginTop: '4px' }}>Nobody outside this chat, not even LatticeLink, can read or listen to them.</div>
         </div>
 
         {[
           { label: 'ML-KEM Key', value: activeContact.mlKemPubKey?.slice(0, 16) + '...', color: '#8b5cf6', icon: Box },
           { label: 'ML-DSA Key', value: activeContact.mlDsaPubKey?.slice(0, 16) + '...', color: '#3b82f6', icon: Shield },
         ].map((item, i) => (
-          <div key={i} style={{ background: 'rgba(0,0,0,0.3)', padding: '12px 16px', borderRadius: '12px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+          <div key={i} style={{ background: 'var(--bg-inset)', padding: '12px 16px', borderRadius: '12px', marginBottom: '12px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
               <item.icon size={12} color={item.color} /> {item.label}
             </div>
             <div style={{ color: item.color, fontSize: '13px', fontFamily: 'monospace', fontWeight: '500' }}>{item.value}</div>
           </div>
         ))}
         
-        <h4 style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '24px', marginBottom: '12px' }}>Media & Docs</h4>
+        <h4 style={{ color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '24px', marginBottom: '12px' }}>Media & Docs</h4>
         {sharedMedia.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', paddingBottom: '16px' }}>
             {sharedMedia.map(media => {
@@ -953,7 +1052,7 @@ const MessagesPage = () => {
               const isVid = (media.file_meta?.mimetype || '').startsWith('video/') || (media.file_meta?.name || '').match(/\.(mp4|webm|mov)$/i);
 
               return (
-                <div key={media.id} style={{ width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', cursor: 'pointer', position: 'relative' }} onClick={() => {
+                <div key={media.id} style={{ width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-hover)', cursor: 'pointer', position: 'relative' }} onClick={() => {
                   if (streamUrl) {
                     window.open(streamUrl, '_blank');
                   }
@@ -968,7 +1067,7 @@ const MessagesPage = () => {
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '4px', textAlign: 'center' }}>
                       <Paperclip size={20} color="#38bdf8" />
-                      <span style={{ fontSize: '9px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{media.file_meta?.name || media.text || 'File'}</span>
+                      <span style={{ fontSize: '9px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{media.file_meta?.name || media.text || 'File'}</span>
                     </div>
                   )}
                 </div>
@@ -976,7 +1075,7 @@ const MessagesPage = () => {
             })}
           </div>
         ) : (
-          <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginBottom: '16px' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '16px', background: 'var(--bg-inset)', borderRadius: '12px', marginBottom: '16px' }}>
             No media shared yet.
           </div>
         )}
@@ -997,8 +1096,8 @@ const MessagesPage = () => {
         /* Custom Scrollbar for Chat */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
       `}</style>
       
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
@@ -1036,13 +1135,13 @@ const MessagesPage = () => {
         />
       )}
       {showCreateGroup && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '440px', padding: '24px', background: '#0f172a', border: '1px solid #8b5cf6', borderRadius: '16px', color: 'white' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '440px', padding: '24px', background: 'var(--bg-elevated)', border: '1px solid #8b5cf6', borderRadius: '16px', color: 'var(--text-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', color: 'white' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', color: 'var(--text-primary)' }}>
                 <Users size={20} color="#8b5cf6" /> Create Quantum Group Channel
               </h3>
-              <button onClick={() => setShowCreateGroup(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <button onClick={() => setShowCreateGroup(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
@@ -1061,32 +1160,32 @@ const MessagesPage = () => {
                 setActiveSidebarTab('groups');
               }
             }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '6px' }}>Group Name:</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '12px', marginBottom: '6px' }}>Group Name:</label>
               <input 
                 type="text" 
                 placeholder="e.g. Cyber Defense Squad" 
                 value={newGroupName} 
                 onChange={e => setNewGroupName(e.target.value)} 
                 required 
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
               />
 
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '6px' }}>Description:</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '12px', marginBottom: '6px' }}>Description:</label>
               <input 
                 type="text" 
                 placeholder="Group purpose or topic..." 
                 value={newGroupDesc} 
                 onChange={e => setNewGroupDesc(e.target.value)} 
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
               />
 
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '6px' }}>Select Contacts to Add:</label>
-              <div style={{ maxHeight: '140px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '12px', marginBottom: '6px' }}>Select Contacts to Add:</label>
+              <div style={{ maxHeight: '140px', overflowY: 'auto', background: 'var(--bg-inset)', padding: '8px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--border-subtle)' }}>
                 {contacts.length === 0 ? (
-                  <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', padding: '8px' }}>No contacts found. Add contacts first.</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: '8px' }}>No contacts found. Add contacts first.</div>
                 ) : (
                   contacts.map(c => (
-                    <label key={c.username} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', color: 'white', fontSize: '13px' }}>
+                    <label key={c.username} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '13px' }}>
                       <input 
                         type="checkbox" 
                         checked={selectedMembers.includes(c.username)} 
@@ -1102,7 +1201,7 @@ const MessagesPage = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowCreateGroup(false)} style={{ padding: '10px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={() => setShowCreateGroup(false)} style={{ padding: '10px 18px', background: 'transparent', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" style={{ padding: '10px 22px', background: '#8b5cf6', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
                   Create Channel
                 </button>
@@ -1113,18 +1212,18 @@ const MessagesPage = () => {
       )}
 
       {showNewChatModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '440px', padding: '24px', background: '#0f172a', border: '1px solid #3b82f6', borderRadius: '16px', color: 'white' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '440px', padding: '24px', background: 'var(--bg-elevated)', border: '1px solid #3b82f6', borderRadius: '16px', color: 'var(--text-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', color: 'white' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px', color: 'var(--text-primary)' }}>
                 <MessageSquare size={20} color="#3b82f6" /> Start New Encrypted Chat
               </h3>
-              <button onClick={() => setShowNewChatModal(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <button onClick={() => setShowNewChatModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>
+            <div style={{ color: 'var(--text-dim)', fontSize: '13px', marginBottom: '16px' }}>
               Select from your connected contacts to open a conversation:
             </div>
 
@@ -1139,8 +1238,8 @@ const MessagesPage = () => {
                 });
                 if (combinedList.length === 0) {
                   return (
-                    <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                      <div style={{ marginBottom: '6px', color: '#cbd5e1' }}>No other users found in directory yet</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px', background: 'var(--surface-hover)', borderRadius: '12px' }}>
+                      <div style={{ marginBottom: '6px', color: 'var(--text-secondary)' }}>No other users found in directory yet</div>
                       <div style={{ fontSize: '12px' }}>Register a second user account to begin secure messaging.</div>
                     </div>
                   );
@@ -1155,7 +1254,7 @@ const MessagesPage = () => {
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px',
-                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
+                      background: 'var(--surface-hover)', border: '1px solid var(--border-subtle)',
                       borderRadius: '12px', cursor: 'pointer', transition: '0.2s'
                     }}
                     className="hover:bg-blue-500/20"
@@ -1164,8 +1263,8 @@ const MessagesPage = () => {
                       {c.username.charAt(0)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'white', fontWeight: '600', fontSize: '14px' }}>{c.username}</div>
-                      <div style={{ color: c.isDirectoryUser ? '#94a3b8' : '#10b981', fontSize: '11px' }}>
+                      <div style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px' }}>{c.username}</div>
+                      <div style={{ color: c.isDirectoryUser ? 'var(--text-dim)' : '#10b981', fontSize: '11px' }}>
                         {c.isDirectoryUser ? 'Network User' : 'Connected Contact'}
                       </div>
                     </div>
@@ -1176,11 +1275,25 @@ const MessagesPage = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowNewChatModal(false)} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={() => setShowNewChatModal(false)} style={{ padding: '8px 18px', background: 'transparent', border: '1px solid var(--input-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>Close</button>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Poll Creation Modal */}
+      <AnimatePresence>
+        {showPollModal && activeConvId && (
+          <PollCreationModal
+            conversationId={activeConvId}
+            sessionToken={currentUser?.session_token}
+            currentUsername={currentUser?.username}
+            isGroup={!!activeGroup}
+            onClose={() => setShowPollModal(false)}
+            onPollCreated={handlePollCreated}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import AuthPage from './AuthPage';
 import HomePage from './HomePage';
 import Navbar from './Navbar';
 import MessagesPage from './MessagesPage';
+import StatusPage from './StatusPage';
 import SettingsPage from './SettingsPage';
 import SecurityLab from './SecurityLab';
 import KeyManagementCenter from './KeyManagementCenter';
@@ -23,8 +24,8 @@ const AppInner = () => {
   const { currentUser } = useAuth();
 
   const APP_PAGES = currentUser?.role === 'ADMIN' 
-    ? ['messages', 'files', 'crossplatform', 'lab', 'keymanagement', 'network', 'analytics', 'audit', 'admin', 'howitworks', 'settings', 'identity']
-    : ['messages', 'files', 'crossplatform', 'howitworks', 'settings', 'identity', 'keymanagement'];
+    ? ['messages', 'status', 'files', 'crossplatform', 'lab', 'keymanagement', 'network', 'analytics', 'audit', 'admin', 'howitworks', 'settings', 'identity']
+    : ['messages', 'status', 'files', 'crossplatform', 'howitworks', 'settings', 'identity', 'keymanagement'];
 
   useEffect(() => {
     const path = window.location.pathname.replace('/', '');
@@ -64,12 +65,13 @@ const AppInner = () => {
   return (
     <GlobalBackground>
       <div className="container relative">
-        <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif', color: 'white' }}>
+        <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif', color: 'var(--text-primary)' }}>
           
           <Navbar currentPage={currentPage} onNavigate={navigate} />
           
           <div className="app-main-content" style={{ marginLeft: '260px', width: 'calc(100% - 260px)', height: '100vh', overflowY: 'auto' }}>
             {currentPage === 'messages' && <MessagesPage />}
+            {currentPage === 'status' && <StatusPage />}
             {currentPage === 'files' && <VaultPage />}
             {currentPage === 'crossplatform' && <CrossPlatformCenter />}
             

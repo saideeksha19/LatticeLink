@@ -247,15 +247,15 @@ const VaultPage = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', zIndex: 10 }}>
         <div>
-          <h1 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '28px' }}>
+          <h1 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '28px' }}>
             <FolderLock size={32} color="#3b82f6" /> Quantum Data Vault
           </h1>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>Zero-knowledge, post-quantum encrypted storage.</p>
+          <p style={{ color: 'var(--text-dim)', margin: 0, fontSize: '14px' }}>Zero-knowledge, post-quantum encrypted storage.</p>
         </div>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           {showUpload && (
-            <motion.form initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} onSubmit={handleUpload} style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.4)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <input type="file" onChange={handleFileChange} style={{ color: 'white', fontSize: '13px' }} />
+            <motion.form initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} onSubmit={handleUpload} style={{ display: 'flex', gap: '8px', background: 'var(--bg-inset)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <input type="file" onChange={handleFileChange} style={{ color: 'var(--text-primary)', fontSize: '13px' }} />
               <button type="submit" disabled={!selectedFile} style={{ background: selectedFile ? '#10b981' : '#475569', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: selectedFile ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: 'bold' }}>Save</button>
             </motion.form>
           )}
@@ -266,17 +266,17 @@ const VaultPage = () => {
       </div>
 
       {uploadingState && (
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="glass-card" style={{ padding: '20px', marginBottom: '24px', background: 'rgba(15,23,42,0.8)', border: '1px solid #3b82f6', zIndex: 10 }}>
+        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="glass-card" style={{ padding: '20px', marginBottom: '24px', background: 'var(--bg-surface)', border: '1px solid #3b82f6', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <File size={18} color="#3b82f6" />
             </div>
             <div>
-              <div style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>{uploadingState.fileName}</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '600' }}>{uploadingState.fileName}</div>
               <div style={{ color: '#10b981', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>{uploadingState.step}</div>
             </div>
           </div>
-          <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+          <div style={{ height: '6px', background: 'var(--surface-hover)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${uploadingState.progress}%`, height: '100%', background: uploadingState.step === 'Protected' ? '#10b981' : 'linear-gradient(90deg, #3b82f6, #8b5cf6)', borderRadius: '3px', transition: 'width 0.15s linear' }}></div>
           </div>
         </motion.div>
@@ -286,8 +286,8 @@ const VaultPage = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '24px', zIndex: 10 }}>
         
         {/* Top Left: Storage Ring */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }} className="glass-card" style={{ gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(15, 23, 42, 0.7)' }}>
-          <h3 style={{ color: 'white', margin: '0 0 20px 0', fontSize: '16px', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4 }} className="glass-card" style={{ gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-surface)' }}>
+          <h3 style={{ color: 'var(--text-primary)', margin: '0 0 20px 0', fontSize: '16px', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <HardDrive size={18} color="#8b5cf6" /> Storage Capacity
           </h3>
           <div style={{ position: 'relative', width: '120px', height: '120px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -302,62 +302,62 @@ const VaultPage = () => {
               </defs>
             </svg>
             <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{usedPercentage.toFixed(1)}%</span>
-              <span style={{ color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase' }}>Used</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 'bold' }}>{usedPercentage.toFixed(1)}%</span>
+              <span style={{ color: 'var(--text-dim)', fontSize: '10px', textTransform: 'uppercase' }}>Used</span>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '24px', color: '#cbd5e1', fontSize: '13px' }}>
-            <div style={{ textAlign: 'center' }}><div style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>{totalBytes > 1024*1024*1024 ? usedGB + ' GB' : usedMB + ' MB'}</div><div style={{ color: '#64748b', fontSize: '11px' }}>Encrypted</div></div>
-            <div style={{ textAlign: 'center' }}><div style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>10 GB</div><div style={{ color: '#64748b', fontSize: '11px' }}>Total Space</div></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '24px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '16px' }}>{totalBytes > 1024*1024*1024 ? usedGB + ' GB' : usedMB + ' MB'}</div><div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Encrypted</div></div>
+            <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '16px' }}>10 GB</div><div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Total Space</div></div>
           </div>
         </motion.div>
 
         {/* Top Middle: Distribution Bar */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }} className="glass-card" style={{ gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'rgba(15, 23, 42, 0.7)' }}>
-          <h3 style={{ color: 'white', margin: '0 0 16px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }} className="glass-card" style={{ gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
+          <h3 style={{ color: 'var(--text-primary)', margin: '0 0 16px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Server size={18} color="#3b82f6" /> File Distribution
           </h3>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}>
-            <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', gap: '2px', background: 'rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', height: '12px', borderRadius: '6px', overflow: 'hidden', gap: '2px', background: 'var(--surface-hover)' }}>
               {docsPct > 0 && <div style={{ width: `${docsPct}%`, background: '#3b82f6' }} title={`Documents (${docsPct.toFixed(1)}%)`}></div>}
               {mediaPct > 0 && <div style={{ width: `${mediaPct}%`, background: '#10b981' }} title={`Media (${mediaPct.toFixed(1)}%)`}></div>}
               {codePct > 0 && <div style={{ width: `${codePct}%`, background: '#f59e0b' }} title={`Code (${codePct.toFixed(1)}%)`}></div>}
               {archivePct > 0 && <div style={{ width: `${archivePct}%`, background: '#8b5cf6' }} title={`Archives (${archivePct.toFixed(1)}%)`}></div>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div><span style={{ color: '#94a3b8', fontSize: '12px' }}>Documents ({docsPct.toFixed(0)}%)</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div><span style={{ color: '#94a3b8', fontSize: '12px' }}>Media ({mediaPct.toFixed(0)}%)</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></div><span style={{ color: '#94a3b8', fontSize: '12px' }}>Code/Scripts ({codePct.toFixed(0)}%)</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6' }}></div><span style={{ color: '#94a3b8', fontSize: '12px' }}>Archives ({archivePct.toFixed(0)}%)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div><span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Documents ({docsPct.toFixed(0)}%)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div><span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Media ({mediaPct.toFixed(0)}%)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></div><span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Code/Scripts ({codePct.toFixed(0)}%)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6' }}></div><span style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Archives ({archivePct.toFixed(0)}%)</span></div>
             </div>
           </div>
         </motion.div>
 
         {/* Top Right: Metrics */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, delay: 0.2 }} style={{ gridColumn: 'span 4', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="glass-card" style={{ flex: 1, padding: '20px', background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="glass-card" style={{ flex: 1, padding: '20px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '16px' }}>
              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                <ShieldCheck size={24} color="#10b981" />
              </div>
              <div>
-               <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{vaultFiles.length}</div>
-               <div style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Files Encrypted</div>
+               <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 'bold' }}>{vaultFiles.length}</div>
+               <div style={{ color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Files Encrypted</div>
              </div>
           </div>
-          <div className="glass-card" style={{ flex: 1, padding: '20px', background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="glass-card" style={{ flex: 1, padding: '20px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '16px' }}>
              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                <Activity size={24} color="#3b82f6" />
              </div>
              <div>
-               <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>42 MB/s</div>
-               <div style={{ color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Tunnel Speed</div>
+               <div style={{ color: 'var(--text-primary)', fontSize: '24px', fontWeight: 'bold' }}>42 MB/s</div>
+               <div style={{ color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Tunnel Speed</div>
              </div>
           </div>
         </motion.div>
 
         {/* Bottom: File List */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.3 }} className="glass-card" style={{ gridColumn: 'span 12', padding: '0', background: 'rgba(15, 23, 42, 0.6)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 1fr 120px', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', background: 'rgba(0,0,0,0.2)', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.3 }} className="glass-card" style={{ gridColumn: 'span 12', padding: '0', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 1fr 120px', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-dim)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', background: 'var(--bg-inset)', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
             <div>Filename</div>
             <div>Size</div>
             <div>Modified</div>
@@ -368,25 +368,25 @@ const VaultPage = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
             {vaultFiles.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No files found. Securely upload files to get started.</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No files found. Securely upload files to get started.</div>
             ) : (
               vaultFiles.map(file => (
-                <div key={file.id} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 1fr 120px', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'center', transition: '0.2s' }} className="hover:bg-white/5 group">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'white', fontWeight: '500', fontSize: '15px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '8px' }}>
+                <div key={file.id} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 1fr 120px', padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', alignItems: 'center', transition: '0.2s' }} className="hover:bg-white/5 group">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-primary)', fontWeight: '500', fontSize: '15px' }}>
+                    <div style={{ background: 'var(--surface-hover)', padding: '8px', borderRadius: '8px' }}>
                       {getFileIcon(file.type)}
                     </div>
                     {file.name}
                   </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>{file.size}</div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>{file.date}</div>
-                  <div style={{ color: '#64748b', fontSize: '13px', fontFamily: 'monospace' }}>{file.hash || "a8f3...9b2c"}</div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>{file.size}</div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>{file.date}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontFamily: 'monospace' }}>{file.hash || "a8f3...9b2c"}</div>
                   <div>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981', fontSize: '12px', background: '#10b98115', padding: '4px 10px', borderRadius: '6px', width: 'fit-content', border: '1px solid #10b98130' }}>
                       <Lock size={12} /> Encrypted
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-evenly', color: '#94a3b8', opacity: 0.3, transition: 'opacity 0.2s' }} className="group-hover:opacity-100">
+                  <div style={{ display: 'flex', justifyContent: 'space-evenly', color: 'var(--text-dim)', opacity: 0.3, transition: 'opacity 0.2s' }} className="group-hover:opacity-100">
                     <button onClick={(e) => downloadFile(e, file)} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px' }} title="Download" className="hover:scale-110 transition-transform"><Download size={18} /></button>
                     <button onClick={(e) => { e.stopPropagation(); setShareFileModal(file); setTargetUser(''); setShareMsg(null); }} style={{ background: 'transparent', border: 'none', color: '#10b981', cursor: 'pointer', padding: '4px' }} title="Share" className="hover:scale-110 transition-transform"><Share2 size={18} /></button>
                     <button onClick={(e) => handleDeleteFile(e, file)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }} title="Delete" className="hover:scale-110 transition-transform"><Trash2 size={18} /></button>
@@ -401,25 +401,25 @@ const VaultPage = () => {
 
       {/* Share File Modal */}
       {shareFileModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '480px', padding: '28px', background: '#0f172a', border: '1px solid #3b82f6', borderRadius: '16px', color: 'white' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-bg)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '90%', maxWidth: '480px', padding: '28px', background: 'var(--bg-elevated)', border: '1px solid #3b82f6', borderRadius: '16px', color: 'var(--text-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px' }}>
                 <Share2 size={20} color="#10b981" /> Share Encrypted File
               </h3>
-              <button onClick={() => setShareFileModal(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <button onClick={() => setShareFileModal(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
-              <strong>File:</strong> {shareFileModal.name} <span style={{ color: '#94a3b8', marginLeft: '8px' }}>({shareFileModal.size})</span>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
+              <strong>File:</strong> {shareFileModal.name} <span style={{ color: 'var(--text-dim)', marginLeft: '8px' }}>({shareFileModal.size})</span>
             </div>
 
             <form onSubmit={handleShareSubmit}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '8px' }}>Recipient or Group Channel:</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '13px', marginBottom: '8px' }}>Recipient or Group Channel:</label>
               {(Object.keys(allUsers || {}).length > 0 || (groups && groups.length > 0)) ? (
-                <select value={targetUser} onChange={e => setTargetUser(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '14px', marginBottom: '16px', outline: 'none' }}>
+                <select value={targetUser} onChange={e => setTargetUser(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-primary)', fontSize: '14px', marginBottom: '16px', outline: 'none' }}>
                   <option value="" disabled style={{ color: 'black' }}>-- Select Recipient or Channel --</option>
                   {Object.keys(allUsers || {}).length > 0 && (
                     <optgroup label="Network Users" style={{ color: 'black' }}>
@@ -441,7 +441,7 @@ const VaultPage = () => {
                   )}
                 </select>
               ) : (
-                <input type="text" placeholder="Enter recipient username or group ID..." value={targetUser} onChange={e => setTargetUser(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '14px', marginBottom: '16px', outline: 'none' }} />
+                <input type="text" placeholder="Enter recipient username or group ID..." value={targetUser} onChange={e => setTargetUser(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-primary)', fontSize: '14px', marginBottom: '16px', outline: 'none' }} />
               )}
 
               {shareMsg && (
@@ -451,7 +451,7 @@ const VaultPage = () => {
               )}
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShareFileModal(null)} style={{ padding: '10px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={() => setShareFileModal(null)} style={{ padding: '10px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" disabled={isSharing || !targetUser} style={{ padding: '10px 22px', background: targetUser ? '#10b981' : '#475569', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold', cursor: targetUser ? 'pointer' : 'not-allowed' }}>
                   {isSharing ? 'Encrypting & Sharing...' : 'Share File'}
                 </button>

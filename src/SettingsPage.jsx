@@ -68,8 +68,8 @@ const SettingsSection = ({ title, icon: Icon, themeColor, children }) => {
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       <div style={{
-        background: 'rgba(15, 23, 42, 0.6)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: '16px',
         overflow: 'hidden',
         backdropFilter: 'blur(20px)',
@@ -77,19 +77,19 @@ const SettingsSection = ({ title, icon: Icon, themeColor, children }) => {
         transition: 'border-color 0.3s ease'
       }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${themeColor}44`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
       >
         <div style={{ 
           padding: '20px 24px', 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex', alignItems: 'center', gap: '12px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--surface-hover)',
           transform: 'translateZ(20px)' // Inner 3D pop
         }}>
           <div style={{ padding: '8px', background: `${themeColor}15`, borderRadius: '8px' }}>
             <Icon size={18} color={themeColor} />
           </div>
-          <h3 style={{ color: 'white', margin: 0, fontSize: '16px', fontWeight: '600', letterSpacing: '0.5px' }}>{title}</h3>
+          <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '16px', fontWeight: '600', letterSpacing: '0.5px' }}>{title}</h3>
         </div>
         <div style={{ padding: '8px', transform: 'translateZ(10px)' }}>
           {children}
@@ -101,19 +101,19 @@ const SettingsSection = ({ title, icon: Icon, themeColor, children }) => {
 
 const SettingRow = ({ label, sub, checked, onChange, isLast, themeColor }) => (
   <motion.div 
-    whileHover={{ backgroundColor: 'rgba(255,255,255,0.03)', x: 4 }}
+    whileHover={{ backgroundColor: 'var(--surface-hover)', x: 4 }}
     style={{ 
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
       padding: '16px', 
-      borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
+      borderBottom: isLast ? 'none' : '1px solid var(--border-subtle)',
       borderRadius: '8px',
       cursor: 'pointer'
     }}
     onClick={onChange}
   >
     <div>
-      <div style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{label}</div>
-      <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>{sub}</div>
+      <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>{label}</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{sub}</div>
     </div>
     <Toggle checked={checked} onChange={(e) => { e.stopPropagation(); onChange(); }} themeColor={themeColor} />
   </motion.div>
@@ -129,7 +129,8 @@ const THEMES = [
 
 const SettingsPage = () => {
   const { currentUser, updateUserProfile } = useAuth();
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, setAppearanceMode } = useSettings();
+  const appearanceMode = settings.appearance?.mode === 'light' ? 'light' : 'dark';
   const [devices, setDevices] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -203,7 +204,7 @@ const SettingsPage = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="dashboard-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: '#020617' }}>
+    <div className="dashboard-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-page)' }}>
       
       {settings.appearance?.matrixRain !== false && <MatrixRain />}
       
@@ -212,8 +213,8 @@ const SettingsPage = () => {
           
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '40px' }}>
-            <h1 style={{ color: 'white', fontSize: '42px', fontWeight: '900', margin: '0 0 8px 0', letterSpacing: '-1px' }}>System Preferences</h1>
-            <p style={{ color: '#94a3b8', margin: 0, fontSize: '16px' }}>Manage your identity, security, and global theme parameters.</p>
+            <h1 style={{ color: 'var(--text-primary)', fontSize: '42px', fontWeight: '900', margin: '0 0 8px 0', letterSpacing: '-1px' }}>System Preferences</h1>
+            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '16px' }}>Manage your identity, security, and global theme parameters.</p>
           </motion.div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
@@ -226,7 +227,7 @@ const SettingsPage = () => {
                 initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 className="glass-card" 
                 style={{ 
-                  padding: '32px', background: 'rgba(15,23,42,0.6)', 
+                  padding: '32px', background: 'var(--bg-surface)', 
                   border: `1px solid ${currentThemeColor}44`, 
                   borderRadius: '16px', backdropFilter: 'blur(20px)',
                   boxShadow: `0 10px 40px -10px ${currentThemeColor}33`
@@ -243,8 +244,8 @@ const SettingsPage = () => {
                     {(currentUser?.username || currentUser?.name || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: 'white', fontSize: '26px', fontWeight: '900', letterSpacing: '-0.5px' }}>{currentUser?.username || currentUser?.name || 'User'}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>{currentUser?.email || 'No email provided'}</div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '26px', fontWeight: '900', letterSpacing: '-0.5px' }}>{currentUser?.username || currentUser?.name || 'User'}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>{currentUser?.email || 'No email provided'}</div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '700', marginTop: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                       <Shield size={12} /> {currentUser?.role || 'User'}
                     </div>
@@ -253,7 +254,7 @@ const SettingsPage = () => {
                     whileHover={{ scale: 1.05, backgroundColor: `${currentThemeColor}33` }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => { setEditName(currentUser?.username || ''); setEditEmail(currentUser?.email || ''); setIsEditing(true); }}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${currentThemeColor}66`, color: 'white', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ background: 'var(--surface-hover)', border: `1px solid ${currentThemeColor}66`, color: 'var(--text-primary)', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
                     <Edit3 size={14} /> Edit
                   </motion.button>
@@ -263,7 +264,7 @@ const SettingsPage = () => {
               {/* Theme & Appearance */}
               <SettingsSection title="Global Theme Engine" icon={Palette} themeColor={currentThemeColor}>
                 <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <div style={{ color: 'white', fontSize: '14px', fontWeight: '500', marginBottom: '16px' }}>Select Base Accent</div>
+                  <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '16px' }}>Select Base Accent</div>
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     {THEMES.map(theme => (
                       <motion.div
@@ -274,19 +275,55 @@ const SettingsPage = () => {
                         style={{
                           width: '40px', height: '40px', borderRadius: '50%',
                           background: theme.color, cursor: 'pointer',
-                          border: currentThemeColor === theme.color ? '2px solid white' : '2px solid transparent',
+                          border: currentThemeColor === theme.color ? '2px solid var(--text-primary)' : '2px solid transparent',
                           boxShadow: currentThemeColor === theme.color ? `0 0 20px ${theme.color}` : 'none',
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}
                       >
-                        {currentThemeColor === theme.color && <div style={{ width: '8px', height: '8px', background: 'white', borderRadius: '50%' }} />}
+                        {currentThemeColor === theme.color && <div style={{ width: '8px', height: '8px', background: 'var(--text-primary)', borderRadius: '50%' }} />}
                       </motion.div>
                     ))}
                   </div>
                 </div>
+                {/* Appearance mode selector — single source of truth is
+                    settings.appearance.mode via setAppearanceMode */}
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Appearance Mode</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '12px' }}>Switch the entire interface between dark and light</div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      { mode: 'dark', label: 'Dark', icon: Moon },
+                      { mode: 'light', label: 'Light', icon: Sun }
+                    ].map(opt => {
+                      const selected = appearanceMode === opt.mode;
+                      const OptIcon = opt.icon;
+                      return (
+                        <motion.button
+                          key={opt.mode}
+                          type="button"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setAppearanceMode(opt.mode)}
+                          aria-pressed={selected}
+                          style={{
+                            flex: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            padding: '10px 16px', borderRadius: '10px', cursor: 'pointer',
+                            fontSize: '13px', fontWeight: '600',
+                            background: selected ? `${currentThemeColor}22` : 'var(--surface-hover)',
+                            border: selected ? `1px solid ${currentThemeColor}` : '1px solid var(--border-subtle)',
+                            color: selected ? currentThemeColor : 'var(--text-secondary)',
+                            transition: 'background 0.2s, border-color 0.2s, color 0.2s'
+                          }}
+                        >
+                          <OptIcon size={15} /> {opt.label}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
                 {[
-                  { key: 'matrixRain', label: 'Matrix Rain Background', sub: 'Animated code rain effect globally', cat: 'appearance' },
-                  { key: 'darkMode', label: 'Force Dark Mode', sub: 'Override system theme', cat: 'appearance' }
+                  { key: 'matrixRain', label: 'Matrix Rain Background', sub: 'Animated code rain effect globally', cat: 'appearance' }
                 ].map((s, i, arr) => (
                   <SettingRow 
                     key={s.key} 
@@ -331,16 +368,14 @@ const SettingsPage = () => {
                     { label: 'ML-KEM Public Key (Kyber)', value: currentUser?.mlKemPubKey || 'Kyber-1024 Post-Quantum Key Encapsulation Active', icon: Box, color: currentThemeColor },
                     { label: 'ML-DSA Public Key (Dilithium)', value: currentUser?.mlDsaPubKey || 'Dilithium-87 Post-Quantum Signature Key Active', icon: Key, color: currentThemeColor },
                   ].map((item, i) => (
-                    <motion.div 
-                      whileHover={{ x: 4, backgroundColor: 'rgba(0,0,0,0.6)' }}
-                      key={i} 
-                      style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.03)' }}
-                    >
+                    <motion.div                    whileHover={{ x: 4, backgroundColor: 'var(--surface-hover)' }}
+                    key={i} 
+                    style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-inset)', borderRadius: '12px', marginBottom: '8px', border: '1px solid var(--border-subtle)' }}>
                       <div style={{ padding: '10px', background: `${item.color}22`, borderRadius: '10px', boxShadow: `inset 0 0 10px ${item.color}44` }}>
                         <item.icon size={20} color={item.color} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '4px' }}>{item.label}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '4px' }}>{item.label}</div>
                         <div style={{ color: item.color, fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.value}</div>
                       </div>
                     </motion.div>
@@ -425,19 +460,19 @@ const SettingsPage = () => {
                       style={{
                         padding: '16px', display: 'flex', alignItems: 'center', gap: '16px',
                         background: d.current ? 'rgba(16,185,129,0.05)' : 'transparent',
-                        border: d.current ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.04)',
+                        border: d.current ? '1px solid rgba(16,185,129,0.2)' : '1px solid var(--border-subtle)',
                         borderRadius: '12px', marginBottom: '8px'
                       }}
                     >
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: d.current ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: d.current ? 'rgba(16,185,129,0.15)' : 'var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <d.icon size={20} color={d.current ? '#10b981' : '#94a3b8'} />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ color: 'white', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {d.name}
                           {d.current && <span style={{ color: '#10b981', fontSize: '9px', background: 'rgba(16,185,129,0.15)', padding: '2px 8px', borderRadius: '100px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current</span>}
                         </div>
-                        <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <span><Globe size={12} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> {d.os || 'Unknown OS'}</span>
                         </div>
                       </div>
@@ -466,27 +501,27 @@ const SettingsPage = () => {
         {isEditing && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--overlay-bg)', backdropFilter: 'blur(10px)' }}
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              style={{ background: 'rgba(15,23,42,0.9)', border: `1px solid ${currentThemeColor}66`, borderRadius: '24px', padding: '40px', width: '400px', boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 40px ${currentThemeColor}33` }}
+              style={{ background: 'var(--modal-bg)', border: `1px solid ${currentThemeColor}66`, borderRadius: '24px', padding: '40px', width: '400px', boxShadow: `0 20px 60px rgba(0,0,0,0.4), 0 0 40px ${currentThemeColor}33` }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <h2 style={{ margin: 0, color: 'white', fontSize: '24px' }}>Edit Profile</h2>
+                <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px' }}>Edit Profile</h2>
                 <button onClick={() => setIsEditing(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={24} /></button>
               </div>
               <form onSubmit={handleSaveProfile}>
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '8px' }}>Operator Alias</label>
-                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '12px', color: 'white', fontSize: '16px', outline: 'none' }} onFocus={(e) => e.target.style.borderColor = currentThemeColor} onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}/>
+                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Operator Alias</label>
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', padding: '12px 16px', borderRadius: '12px', color: 'var(--text-primary)', fontSize: '16px', outline: 'none' }} onFocus={(e) => e.target.style.borderColor = currentThemeColor} onBlur={(e) => e.target.style.borderColor = 'var(--input-border)'}/>
                 </div>
                 <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '8px' }}>Secure Email</label>
-                  <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '12px', color: 'white', fontSize: '16px', outline: 'none' }} onFocus={(e) => e.target.style.borderColor = currentThemeColor} onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}/>
+                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px' }}>Secure Email</label>
+                  <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', padding: '12px 16px', borderRadius: '12px', color: 'var(--text-primary)', fontSize: '16px', outline: 'none' }} onFocus={(e) => e.target.style.borderColor = currentThemeColor} onBlur={(e) => e.target.style.borderColor = 'var(--input-border)'}/>
                 </div>
                 <div style={{ display: 'flex', gap: '16px' }}>
-                  <button type="button" onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                  <button type="button" onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid var(--input-border)', color: 'var(--text-primary)', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
                   <button type="submit" style={{ flex: 1, padding: '14px', background: currentThemeColor, border: 'none', color: 'white', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: `0 4px 15px ${currentThemeColor}66` }}>Save Changes</button>
                 </div>
               </form>

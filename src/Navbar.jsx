@@ -1,13 +1,14 @@
 import React from 'react';
 import { useAuth } from './context/AuthContext';
 import {
-  LayoutDashboard, MessageSquare, FolderLock, 
+  LayoutDashboard, MessageSquare, CircleDashed, FolderLock, 
   ShieldAlert, Settings, LogOut, Activity, Smartphone, Target, BarChart3, Globe, Fingerprint, Key, FileSearch, Shield, BookOpen, Lock
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   // Primary Experience
   { id: 'messages',      icon: MessageSquare,   label: 'Messages' },
+  { id: 'status',        icon: CircleDashed,    label: 'Status' },
   { id: 'files',         icon: FolderLock,      label: 'File Sharing' },
   { id: 'crossplatform', icon: Smartphone,      label: 'Cross-Platform' },
   // Tools / Post-Quantum SOC
@@ -30,7 +31,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
   const NavItem = (item) => {
     if (item.type === 'separator') {
       return (
-        <div style={{ padding: '16px 20px 8px', color: '#64748b', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+        <div style={{ padding: '16px 20px 8px', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
           {item.label}
         </div>
       );
@@ -44,7 +45,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
         style={{
           display: 'flex', alignItems: 'center', gap: '14px',
           padding: '12px 20px', cursor: 'pointer',
-          color: active ? 'white' : '#94a3b8',
+          color: active ? 'var(--text-primary)' : 'var(--text-dim)',
           background: active ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
           borderLeft: active ? '3px solid #3b82f6' : '3px solid transparent',
           transition: 'all 0.2s ease', borderRadius: '0 8px 8px 0',
@@ -65,19 +66,19 @@ const Navbar = ({ currentPage, onNavigate }) => {
   return (
     <nav style={{
       width: '260px', height: '100vh', position: 'fixed', left: 0, top: 0,
-      background: 'rgba(8, 12, 30, 0.97)', backdropFilter: 'blur(24px)',
-      borderRight: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--sidebar-bg)', backdropFilter: 'blur(24px)',
+      borderRight: '1px solid var(--border-subtle)',
       display: 'flex', flexDirection: 'column', zIndex: 100,
       overflowY: 'auto', overflowX: 'hidden',
     }}>
 
       {/* Brand */}
-      <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold', color: 'white' }}>
+      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
           <img src="/latticelink_logo.png" alt="LatticeLink" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
           <span>Lattice<span style={{ color: '#3b82f6' }}>Link</span></span>
         </div>
-        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px', letterSpacing: '0.5px' }}>Post-Quantum Secure Platform</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '4px', letterSpacing: '0.5px' }}>Post-Quantum Secure Platform</div>
       </div>
 
       {/* Identity Card */}
@@ -85,12 +86,12 @@ const Navbar = ({ currentPage, onNavigate }) => {
         <div 
           onClick={() => onNavigate('identity')}
           style={{
-            padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-            background: currentPage === 'identity' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255,255,255,0.02)',
+            padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)',
+            background: currentPage === 'identity' ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-hover)',
             cursor: 'pointer', transition: '0.2s',
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = currentPage === 'identity' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255,255,255,0.02)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = currentPage === 'identity' ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-hover)'}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{
@@ -103,7 +104,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
               {(currentUser?.username || currentUser?.name || 'U').charAt(0).toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '600' }}>
                 👤 {currentUser?.username || currentUser?.name || 'User'}
               </div>
               <div style={{ color: '#10b981', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
@@ -116,13 +117,13 @@ const Navbar = ({ currentPage, onNavigate }) => {
           {/* Node ID */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '8px 12px', background: 'rgba(0,0,0,0.3)',
-            borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)',
+            padding: '8px 12px', background: 'var(--bg-inset)',
+            borderRadius: '8px', border: '1px solid var(--border-subtle)',
             marginBottom: '8px',
           }}>
             <Fingerprint size={16} color="#3b82f6" style={{ marginTop: '2px' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Identity Hash</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Identity Hash</div>
               <div style={{ 
                 color: '#38bdf8', 
                 fontSize: '11px', 
@@ -162,7 +163,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
       </div>
 
       {/* Logout */}
-      <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)' }}>
         <div
           onClick={handleLogout}
           style={{
@@ -180,7 +181,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
 
       <style>{`
         .nav-item:hover {
-          background: rgba(255,255,255,0.04) !important;
+          background: var(--surface-hover) !important;
         }
         .nav-item.active:hover {
           background: rgba(59, 130, 246, 0.12) !important;

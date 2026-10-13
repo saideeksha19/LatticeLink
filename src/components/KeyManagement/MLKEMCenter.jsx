@@ -47,13 +47,13 @@ const MLKEMCenter = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Key Info Card */}
-      <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+      <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <h2 style={{ color: 'white', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Box size={24} color="#8b5cf6" /> ML-KEM-768 (Kyber)
             </h2>
-            <p style={{ color: '#94a3b8', margin: 0 }}>Quantum-resistant Key Encapsulation Mechanism (FIPS 203 Standard)</p>
+            <p style={{ color: 'var(--text-dim)', margin: 0 }}>Quantum-resistant Key Encapsulation Mechanism (FIPS 203 Standard)</p>
           </div>
           <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
             <ShieldCheck size={16} /> ACTIVE v{activeVersion}
@@ -61,27 +61,27 @@ const MLKEMCenter = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Key Length</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>768-bit</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Key Length</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>768-bit</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Active Version</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Active Version</div>
             <div style={{ color: '#38bdf8', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>Version {activeVersion}</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Last Rotated</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>{lastRotated}</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Last Rotated</div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>{lastRotated}</div>
           </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Security Level</div>
+          <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Security Level</div>
             <div style={{ color: '#8b5cf6', fontSize: '18px', fontWeight: 'bold', marginTop: '4px' }}>NIST Level 3</div>
           </div>
         </div>
 
-        <div style={{ background: 'rgba(0,0,0,0.4)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '24px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>SHA3 Key Fingerprint & Identity</div>
-          <div style={{ color: '#e2e8f0', fontSize: '13px', fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: '1.5' }}>
+        <div style={{ background: 'var(--bg-inset)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '24px' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>SHA3 Key Fingerprint & Identity</div>
+          <div style={{ color: 'var(--text-bright)', fontSize: '13px', fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: '1.5' }}>
             {keyFingerprint || currentUser?.mlKemPubKey || `SHA3-256:${currentUser?.nodeId || 'LL-NODE-ACTIVE'}-v${activeVersion}`}
           </div>
         </div>
@@ -90,7 +90,7 @@ const MLKEMCenter = () => {
           <button 
             onClick={handleRotate} 
             disabled={rotating}
-            style={{ flex: 1, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid #8b5cf6', color: 'white', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: rotating ? 'not-allowed' : 'pointer', fontWeight: 'bold', transition: '0.2s' }}
+            style={{ flex: 1, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid #8b5cf6', color: 'var(--text-primary)', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: rotating ? 'not-allowed' : 'pointer', fontWeight: 'bold', transition: '0.2s' }}
           >
             <RotateCcw size={18} style={{ animation: rotating ? 'spin 1s linear infinite' : 'none' }} /> 
             {rotating ? 'Rotating Keypair via Backend...' : 'Rotate Keys to Next Version'}
@@ -99,7 +99,7 @@ const MLKEMCenter = () => {
 
         {/* Rotation Timeline */}
         {rotating && (
-          <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '24px', padding: '16px', background: 'var(--bg-inset)', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {['Generate New Key', 'Update Backend Session', 'Notify Devices', 'Complete'].map((step, idx) => {
               const active = rotationStep > idx;
               const current = rotationStep === idx + 1;
@@ -120,15 +120,15 @@ const MLKEMCenter = () => {
       </div>
 
       {/* Visualizer */}
-      <div className="glass-card" style={{ padding: '32px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <h3 style={{ color: 'white', margin: '0 0 24px 0', fontSize: '16px' }}>Key Encapsulation Flow (ML-KEM-768)</h3>
+      <div className="glass-card" style={{ padding: '32px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        <h3 style={{ color: 'var(--text-primary)', margin: '0 0 24px 0', fontSize: '16px' }}>Key Encapsulation Flow (ML-KEM-768)</h3>
         
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)' }}>
               <Key size={32} color="#3b82f6" />
             </div>
-            <span style={{ color: 'white', fontWeight: 'bold' }}>{currentUser?.username || 'Local Node'} (Initiator)</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{currentUser?.username || 'Local Node'} (Initiator)</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, padding: '0 20px' }}>
@@ -138,14 +138,14 @@ const MLKEMCenter = () => {
               <div style={{ flex: 1, height: '2px', background: '#8b5cf6' }}></div>
             </div>
             <span style={{ color: '#8b5cf6', fontSize: '12px', fontWeight: 'bold' }}>ML-KEM Handshake</span>
-            <span style={{ color: '#94a3b8', fontSize: '11px' }}>FIPS 203 Ciphertext</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>FIPS 203 Ciphertext</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)' }}>
               <Lock size={32} color="#10b981" />
             </div>
-            <span style={{ color: 'white', fontWeight: 'bold' }}>AES-256 Session Established</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>AES-256 Session Established</span>
           </div>
         </div>
       </div>

@@ -134,7 +134,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
   return (
     <div 
       style={{
-        background: isMe ? 'rgba(30, 58, 138, 0.4)' : 'rgba(15, 23, 42, 0.7)',
+        background: isMe ? 'rgba(30, 58, 138, 0.4)' : 'var(--bg-inset)',
         border: '1px solid rgba(59, 130, 246, 0.3)',
         borderRadius: '14px',
         padding: '12px 16px',
@@ -176,7 +176,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div 
             style={{
-              color: 'white',
+              color: isMe ? '#ffffff' : 'var(--text-primary)',
               fontSize: '14px',
               fontWeight: '600',
               whiteSpace: 'nowrap',
@@ -187,7 +187,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
           >
             {fileName}
           </div>
-          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px', display: 'flex', gap: '6px' }}>
+          <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '2px', display: 'flex', gap: '6px' }}>
             <span>{isVideo ? 'Video' : isImage ? 'Image' : isAudio ? 'Audio Note' : isPdf ? 'PDF Document' : 'Document'}</span>
             {fileSize && <span>• {fileSize}</span>}
           </div>
@@ -196,9 +196,9 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
 
       {/* Media Inline Preview if Image, Video, or Audio */}
       {isImage && (
-        <div style={{ width: '100%', minHeight: '120px', maxHeight: '240px', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', minHeight: '120px', maxHeight: '240px', borderRadius: '8px', overflow: 'hidden', background: 'var(--bg-inset)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isLoadingMedia ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '12px' }}>
               <Loader size={16} className="animate-spin" /> Loading image...
             </div>
           ) : !mediaError && activeMediaUrl ? (
@@ -210,7 +210,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
               onError={() => setMediaError(true)}
             />
           ) : (
-            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px' }}>
               <span>📷 Click below to download image</span>
             </div>
           )}
@@ -218,9 +218,9 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
       )}
 
       {isVideo && showPreview && (
-        <div style={{ width: '100%', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.5)' }}>
+        <div style={{ width: '100%', borderRadius: '8px', overflow: 'hidden', background: 'var(--bg-inset)' }}>
           {isLoadingMedia ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <Loader size={16} className="animate-spin" /> Loading video...
             </div>
           ) : !mediaError && activeMediaUrl ? (
@@ -233,7 +233,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
               onError={() => setMediaError(true)}
             />
           ) : (
-            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px' }}>
               <span>🎥 Click below to download video</span>
             </div>
           )}
@@ -243,7 +243,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
       {isAudio && (
         <div style={{ width: '100%', borderRadius: '8px', overflow: 'hidden', marginTop: '4px' }}>
           {isLoadingMedia ? (
-            <div style={{ padding: '8px', color: '#94a3b8', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ padding: '8px', color: 'var(--text-dim)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Loader size={14} className="animate-spin" /> Loading audio note...
             </div>
           ) : !mediaError && activeMediaUrl ? (
@@ -255,7 +255,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
               onError={() => setMediaError(true)}
             />
           ) : (
-            <div style={{ padding: '8px', color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ padding: '8px', color: 'var(--text-dim)', fontSize: '12px' }}>
               <span>🎵 Click below to download audio</span>
             </div>
           )}
@@ -268,7 +268,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          background: 'rgba(0, 0, 0, 0.3)',
+          background: isMe ? 'rgba(0, 0, 0, 0.3)' : 'var(--surface-hover)',
           padding: '4px 8px',
           borderRadius: '6px',
           fontSize: '10px',
@@ -292,7 +292,7 @@ export const FileMessageCard = ({ message, isMe, sessionToken }) => {
             gap: '6px',
             background: 'rgba(59, 130, 246, 0.25)',
             border: '1px solid rgba(59, 130, 246, 0.5)',
-            color: '#ffffff',
+            color: isMe ? '#ffffff' : 'var(--text-primary)',
             padding: '8px 12px',
             borderRadius: '8px',
             fontSize: '12px',

@@ -69,6 +69,7 @@ const MatrixRain = () => {
   return (
     <canvas
       ref={canvasRef}
+      className="ll-matrix-rain"
       style={{
         display: 'block',
         position: 'fixed',

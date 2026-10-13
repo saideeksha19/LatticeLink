@@ -76,11 +76,10 @@ export const ChatProvider = ({ children }) => {
     // Socket.IO must connect to the Render backend explicitly. With no URL
     // argument, the client would target the Vercel frontend origin, where
     // no Socket.IO server exists in production.
-    const BACKEND_URL =
-      import.meta.env.VITE_BACKEND_URL ||
-      'https://latticelink-backend.onrender.com';
+    const rawBackend = (import.meta.env.VITE_BACKEND_URL || '').trim();
+    const socketTarget = rawBackend || (import.meta.env.DEV ? undefined : 'https://latticelink-backend.onrender.com');
 
-    const newSocket = io(BACKEND_URL, {
+    const newSocket = io(socketTarget, {
       // Polling only: Render's proxy rejects the WebSocket upgrade (HTTP 500),
       // while polling works reliably. Restricting the transport list means
       // no WebSocket upgrade is ever attempted.
@@ -205,6 +204,25 @@ export const ChatProvider = ({ children }) => {
 
       newSocket.on('group_created', () => {
         fetchGroups();
+      });
+
+      // ── Poll real-time updates ──────────────────────────────────────────────
+      newSocket.on('poll_updated', (data) => {
+        const updatedPoll = data?.poll;
+        if (!updatedPoll) return;
+        const convId = updatedPoll.conversation_id;
+        if (!convId) return;
+        setMessages(prev => {
+          const msgs = prev[convId];
+          if (!msgs) return prev;
+          const updated = msgs.map(msg => {
+            if (msg.type === 'poll' && msg.poll?.id === updatedPoll.id) {
+              return { ...msg, poll: updatedPoll };
+            }
+            return msg;
+          });
+          return { ...prev, [convId]: updated };
+        });
       });
 
       setSocket(newSocket);
@@ -487,12 +505,47 @@ export const ChatProvider = ({ children }) => {
     });
   };
 
+  /**
+   * updatePollInMessages – manually patch a poll inside an existing message.
+   * Used after the user votes via the PollCard component so the UI reflects
+   * the latest results without waiting for the socket event.
+   */
+  const updatePollInMessages = (convId, updatedPoll) => {
+    if (!convId || !updatedPoll) return;
+    setMessages(prev => {
+      const msgs = prev[convId];
+      if (!msgs) return prev;
+      const updated = msgs.map(msg => {
+        if (msg.type === 'poll' && msg.poll?.id === updatedPoll.id) {
+          return { ...msg, poll: updatedPoll };
+        }
+        return msg;
+      });
+      return { ...prev, [convId]: updated };
+    });
+  };
+
+  /**
+   * addMessageLocal – append a fully-formed message (e.g. a poll created via
+   * REST) to a conversation. Deduplicates by id so the later socket echo of
+   * the same message is ignored by receive_message / receive_group_message.
+   */
+  const addMessageLocal = (convId, msg) => {
+    if (!convId || !msg) return;
+    setMessages(prev => {
+      const existing = prev[convId] || [];
+      if (existing.find(m => m.id === msg.id)) return prev;
+      return { ...prev, [convId]: [...existing, msg] };
+    });
+  };
+
   return (
     <ChatContext.Provider value={{ 
       socket, messages, chatList, fetchChats, sendMessage, sendFileMessage, editMessage, deleteMessage, 
       markAsRead, calls, logCall, getConversationId, presences, typingUsers, 
       updatePresence, sendTyping, fetchHistory, clearUnread,
-      groups, fetchGroups, createGroup, sendGroupMessage
+      groups, fetchGroups, createGroup, sendGroupMessage,
+      updatePollInMessages, addMessageLocal
     }}>
       {children}
     </ChatContext.Provider>

@@ -46,7 +46,14 @@ export const AuthProvider = ({ children }) => {
       if (user.username) {
         const authHeader = user.session_token ? { 'Authorization': `Bearer ${user.session_token}` } : {};
         fetch(`/api/user/profile/${user.username}`, { headers: authHeader })
-          .then(res => res.ok ? res.json() : null)
+          .then(res => {
+            if (res.status === 401) {
+              setCurrentUser(null);
+              localStorage.removeItem('ll_session_v4');
+              return null;
+            }
+            return res.ok ? res.json() : null;
+          })
           .then(data => {
             if (data && data.user) {
               const freshUser = { ...user, ...data.user, session_token: user.session_token };
