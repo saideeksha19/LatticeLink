@@ -314,9 +314,23 @@ const ViewersModal = ({ statusId, token, onClose }) => {
   );
 };
 
-/* ------------------------------------------------------------------ */
-/* Full-screen status viewer                                           */
-/* ------------------------------------------------------------------ */
+const resolveMediaUrl = (url, token) => {
+  if (!url) return '';
+  let fullUrl = url;
+  if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+    const rawBackend = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
+    const isLocalHost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const backend = rawBackend || (import.meta.env.DEV || isLocalHost ? '' : 'https://latticelink-backend.onrender.com');
+    if (backend) {
+      fullUrl = `${backend}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+    }
+  }
+  if (token && !fullUrl.includes('token=')) {
+    fullUrl += (fullUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+  }
+  return fullUrl;
+};
 
 const StatusViewer = ({ groups, startIndex, startStatusIndex, token, currentUsername, onClose, onViewed, onDelete, onOpenViewers }) => {
   const [groupIndex, setGroupIndex] = useState(startIndex);
@@ -510,7 +524,7 @@ const StatusViewer = ({ groups, startIndex, startStatusIndex, token, currentUser
           </div>
         ) : status.type === 'image' ? (
           <img
-            src={status.media_url}
+            src={resolveMediaUrl(status.media_url, token)}
             alt={status.text || 'Status'}
             onError={() => setUnavailable('This media is missing or expired.')}
             style={{ maxWidth: '92%', maxHeight: '100%', objectFit: 'contain', borderRadius: '12px' }}
@@ -518,7 +532,7 @@ const StatusViewer = ({ groups, startIndex, startStatusIndex, token, currentUser
         ) : (
           <video
             ref={videoRef}
-            src={status.media_url}
+            src={resolveMediaUrl(status.media_url, token)}
             autoPlay
             muted
             playsInline

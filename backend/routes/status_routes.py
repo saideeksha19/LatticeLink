@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 
 from config import Config
 from models import db, Status, StatusView, ContactRequest, Message
-from utils.decorators import token_required, rate_limit
+from utils.decorators import token_required, rate_limit, get_auth_token
 
 status_bp = Blueprint('status', __name__)
 
@@ -172,7 +172,7 @@ def _authorize_status_access(status, username):
 
 def _status_payload(status, username):
     data = status.to_dict(requesting_username=username)
-    token = request.args.get('token') or request.headers.get('Authorization', '').replace('Bearer ', '')
+    token = get_auth_token() or request.args.get('token') or ''
     if status.media_path:
         data['media_url'] = f"/api/status/{status.id}/media?token={token}"
     return data
@@ -234,6 +234,7 @@ def create_status():
     media_path = None
     media_mimetype = None
     media_size = 0
+    media_data = None
 
     if upload is not None and upload.filename:
         filename = upload.filename or ''
@@ -296,6 +297,12 @@ def create_status():
         os.replace(abs_path, final_abs)
         media_path = os.path.relpath(final_abs, os.path.abspath(Config.UPLOAD_FOLDER)).replace(os.sep, '/')
         status_id = final_id
+
+        try:
+            with open(final_abs, 'rb') as f_in:
+                media_data = f_in.read()
+        except Exception:
+            media_data = None
     else:
         if not text:
             return jsonify({'error': 'A text status requires content'}), 400
@@ -303,7 +310,7 @@ def create_status():
 
     if status_type == 'text' and not text:
         return jsonify({'error': 'A text status requires content'}), 400
-    if status_type in ('image', 'video') and not text and not media_path:
+    if status_type in ('image', 'video') and not text and not media_path and not media_data:
         return jsonify({'error': 'Status media is missing'}), 400
 
     now = datetime.utcnow()
@@ -316,6 +323,7 @@ def create_status():
         media_path=media_path,
         media_mimetype=media_mimetype,
         media_size=media_size,
+        media_data=media_data,
         created_at=now,
         expires_at=now + timedelta(hours=STATUS_TTL_HOURS),
     )
@@ -374,7 +382,7 @@ def get_status(status_id):
 @status_bp.route('/<status_id>/media', methods=['GET'])
 @token_required
 def status_media(status_id):
-    """Stream status media with authorization + traversal protection."""
+    """Stream status media with authorization + traversal protection and persistent fallback."""
     current_user = g.current_user
     status, err = _get_status_or_404(status_id)
     if err:
@@ -384,20 +392,48 @@ def status_media(status_id):
         return denied
     if status.is_expired():
         return jsonify({'error': 'This status has expired'}), 410
-    if not status.media_path:
+    if not status.media_path and not status.media_data:
         return jsonify({'error': 'This status has no media'}), 404
 
     abs_path = _status_media_abs_path(status)
-    if not abs_path or not os.path.isfile(abs_path):
-        return jsonify({'error': 'Status media not found'}), 404
+    if abs_path and os.path.isfile(abs_path):
+        return send_file(
+            abs_path,
+            mimetype=status.media_mimetype,
+            as_attachment=False,
+            download_name=os.path.basename(abs_path),
+            max_age=0,
+        )
 
-    return send_file(
-        abs_path,
-        mimetype=status.media_mimetype,
-        as_attachment=False,
-        download_name=os.path.basename(abs_path),
-        max_age=0,
-    )
+    # Ephemeral filesystem recovery: file was wiped from disk on Render restart/deploy,
+    # but raw bytes exist in the persistent database.
+    if status.media_data:
+        if abs_path:
+            try:
+                os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+                with open(abs_path, 'wb') as f_out:
+                    f_out.write(status.media_data)
+                return send_file(
+                    abs_path,
+                    mimetype=status.media_mimetype,
+                    as_attachment=False,
+                    download_name=os.path.basename(abs_path),
+                    max_age=0,
+                )
+            except Exception:
+                pass
+
+        import io
+        ext = EXT_BY_MIME.get(status.media_mimetype, 'bin')
+        return send_file(
+            io.BytesIO(status.media_data),
+            mimetype=status.media_mimetype,
+            as_attachment=False,
+            download_name=f"{status.id}.{ext}",
+            max_age=0,
+        )
+
+    return jsonify({'error': 'Status media not found'}), 404
 
 
 @status_bp.route('/<status_id>/view', methods=['POST'])

@@ -585,6 +585,7 @@ class Status(db.Model):
     media_path = db.Column(db.String(255), nullable=True)  # relative to UPLOAD_FOLDER
     media_mimetype = db.Column(db.String(100), nullable=True)
     media_size = db.Column(db.Integer, default=0)
+    media_data = db.Column(db.LargeBinary, nullable=True)  # Persistent fallback across ephemeral filesystems
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     expires_at = db.Column(db.DateTime, nullable=False, index=True)
 

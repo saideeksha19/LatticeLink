@@ -13,6 +13,48 @@ def get_directory():
     users = User.query.all()
     return jsonify({'directory': [u.to_dict() for u in users]}), 200
 
+@user_bp.route('/search', methods=['GET', 'POST'])
+@token_required
+def search_users():
+    """
+    Search for registered users by username, node_id, or email.
+    Supports query parameters 'q', 'query', or 'username' (and JSON body for POST).
+    Normalizes query (case-insensitive, trims whitespace and optional '@' prefix).
+    """
+    current_user = g.current_user
+    q = ''
+    if request.is_json and request.json:
+        q = str(request.json.get('q') or request.json.get('query') or request.json.get('username') or '')
+    if not q:
+        q = str(request.args.get('q') or request.args.get('query') or request.args.get('username') or '')
+
+    q = q.strip()
+    if q.startswith('@'):
+        q = q[1:].strip()
+
+    if not q:
+        return jsonify({'users': [], 'results': [], 'directory': []}), 200
+
+    q_lower = q.lower()
+    from sqlalchemy import or_, func
+
+    matching_users = User.query.filter(
+        or_(
+            func.lower(User.username).like(f'%{q_lower}%'),
+            func.lower(User.node_id).like(f'%{q_lower}%'),
+            func.lower(User.email).like(f'%{q_lower}%')
+        )
+    ).all()
+
+    users_data = [u.to_dict() for u in matching_users]
+    return jsonify({
+        'users': users_data,
+        'results': users_data,
+        'directory': users_data,
+        'query': q,
+        'count': len(users_data)
+    }), 200
+
 @user_bp.route('/profile/<username>', methods=['GET'])
 @token_required
 def get_profile(username):

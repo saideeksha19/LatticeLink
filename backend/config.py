@@ -38,6 +38,9 @@ class Config:
     TEST_DB_PATH = os.path.join(BASE_DIR, 'instance', 'latticelink_test.db')
     
     _raw_db_url = os.getenv('DATABASE_URL', '')
+    if _raw_db_url.startswith('postgres://'):
+        _raw_db_url = _raw_db_url.replace('postgres://', 'postgresql://', 1)
+
     if LATTICELINK_TEST_MODE and not _raw_db_url:
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{TEST_DB_PATH.replace(os.sep, '/')}"
     elif not _raw_db_url or _raw_db_url.strip() in ('', 'sqlite:///instance/latticelink.db'):
@@ -48,7 +51,7 @@ class Config:
     else:
         SQLALCHEMY_DATABASE_URI = _raw_db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"timeout": 30}}
+    SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"timeout": 30}} if "sqlite" in SQLALCHEMY_DATABASE_URI else {}
     
     @classmethod
     def is_test_database(cls, uri=None):

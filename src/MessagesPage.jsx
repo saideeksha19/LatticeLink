@@ -358,11 +358,18 @@ const MessagesPage = () => {
     }
   };
 
-  const handleContactSearch = () => {
+  const handleContactSearch = async () => {
     if (!searchQuery.trim()) return;
-    const results = searchUser(searchQuery.trim()).filter(u => u.username !== currentUser.username);
-    setSearchResults(results);
-    setShowSearch(true);
+    try {
+      const results = await searchUser(searchQuery.trim());
+      const filtered = (results || []).filter(u => u && u.username !== currentUser.username);
+      setSearchResults(filtered);
+      setShowSearch(true);
+    } catch (e) {
+      console.error("Search failed:", e);
+      setSearchResults([]);
+      setShowSearch(true);
+    }
   };
 
   // --- Render Components ---

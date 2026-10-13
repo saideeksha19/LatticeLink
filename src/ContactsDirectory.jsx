@@ -25,10 +25,16 @@ const ContactsDirectory = () => {
   const [selectedContact, setSelectedContact] = useState(null); 
 
   // --- Handlers ---
-  const handleContactSearch = () => {
+  const handleContactSearch = async () => {
     if (!addSearchQuery.trim()) return;
-    const results = searchUser(addSearchQuery.trim()).filter(u => u.username !== currentUser.username);
-    setAddSearchResults(results);
+    try {
+      const results = await searchUser(addSearchQuery.trim());
+      const filtered = (results || []).filter(u => u && u.username !== currentUser.username);
+      setAddSearchResults(filtered);
+    } catch (e) {
+      console.error("Search failed:", e);
+      setAddSearchResults([]);
+    }
   };
 
   const handleSendRequest = async (username) => {

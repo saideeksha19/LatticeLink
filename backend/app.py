@@ -44,7 +44,15 @@ CORS(
         r"/api/*": {
             "origins": "*",
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Session-Token", "X-Requested-With"]
+            "allow_headers": [
+                "Content-Type",
+                "Authorization",
+                "X-Session-Token",
+                "X-Requested-With",
+                "ngrok-skip-browser-warning",
+                "Accept",
+                "Origin"
+            ]
         }
     }
 )
@@ -153,6 +161,9 @@ def auto_migrate_schema():
         ("chat_customizations", "wallpaper_value", "VARCHAR(512)"),
         ("chat_customizations", "wallpaper_overlay", "REAL DEFAULT 0.0"),
         ("chat_customizations", "created_at", "DATETIME"),
+
+        # Status media persistence
+        ("statuses", "media_data", "BLOB"),
     ]
 
     for table, column, col_type in migrations:

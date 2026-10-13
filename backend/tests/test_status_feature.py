@@ -468,6 +468,68 @@ class TestStatusFeature(unittest.TestCase):
         res = self.client.delete('/api/status/ST-DOESNOT0', headers=self._auth(alice))
         self.assertEqual(res.status_code, 404)
 
+    # -----------------------------------------------------------
+    # H. Media persistence across ephemeral filesystem wipes & client access
+    # -----------------------------------------------------------
+
+    def test_status_media_accessible_by_contact_client(self):
+        """Regression test: Status media uploaded by Alice remains accessible to Bob (contact)."""
+        alice = self._register_and_login('status_alice_media')
+        bob = self._register_and_login('status_bob_media')
+        self._make_contact('status_alice_media', 'status_bob_media')
+
+        # Alice creates an image status
+        res = self.client.post(
+            '/api/status/create', headers=self._auth(alice),
+            data={'file': (io.BytesIO(PNG_BYTES), 'alice_photo.png'), 'text': 'beach day', 'bg_color': '#101828'},
+            content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 201, res.get_json())
+        status_id = res.get_json()['status']['id']
+
+        # Bob fetches status feed
+        feed_res = self.client.get('/api/status/feed', headers=self._auth(bob))
+        self.assertEqual(feed_res.status_code, 200)
+        alice_entry = [s for s in feed_res.get_json()['statuses'] if s['id'] == status_id][0]
+        self.assertIn('media_url', alice_entry)
+
+        # Bob fetches media using Bob's session token
+        media_res = self.client.get(f"/api/status/{status_id}/media?token={bob}")
+        self.assertEqual(media_res.status_code, 200)
+        self.assertEqual(media_res.data, PNG_BYTES)
+        self.assertEqual(media_res.mimetype, 'image/png')
+
+    def test_status_media_remains_accessible_after_ephemeral_disk_wipe(self):
+        """Regression test: Status media remains accessible even when Render's local ephemeral filesystem is wiped."""
+        alice = self._register_and_login('status_alice_pers')
+        bob = self._register_and_login('status_bob_pers')
+        self._make_contact('status_alice_pers', 'status_bob_pers')
+
+        # Alice creates video status
+        res = self.client.post(
+            '/api/status/create', headers=self._auth(alice),
+            data={'file': (io.BytesIO(MP4_BYTES), 'clip.mp4'), 'text': 'cool video'},
+            content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 201, res.get_json())
+        status_id = res.get_json()['status']['id']
+
+        # Verify media bytes were saved in database
+        with app.app_context():
+            rec = Status.query.get(status_id)
+            self.assertIsNotNone(rec.media_data)
+            self.assertEqual(rec.media_data, MP4_BYTES)
+            abs_disk_path = os.path.abspath(os.path.join(Config.UPLOAD_FOLDER, rec.media_path))
+
+        # SIMULATE RENDER EPHEMERAL DISK WIPE (container restart/deploy)
+        if os.path.isfile(abs_disk_path):
+            os.remove(abs_disk_path)
+        self.assertFalse(os.path.isfile(abs_disk_path))
+
+        # Bob requests media from another client after disk wipe
+        media_res = self.client.get(f"/api/status/{status_id}/media?token={bob}")
+        self.assertEqual(media_res.status_code, 200)
+        self.assertEqual(media_res.data, MP4_BYTES)
+        self.assertEqual(media_res.mimetype, 'video/mp4')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -179,10 +179,43 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  const searchUser = (query) => {
+  const searchUser = async (query) => {
     if (!query) return [];
-    const q = query.toLowerCase();
-    return Object.values(allUsers).filter(u =>
+    const rawQ = String(query).trim();
+    const cleanQ = rawQ.startsWith('@') ? rawQ.slice(1).trim() : rawQ;
+    if (!cleanQ) return [];
+    const q = cleanQ.toLowerCase();
+
+    // 1. First attempt dedicated backend search endpoint
+    try {
+      const token = currentUser?.session_token || (() => {
+        try {
+          const saved = localStorage.getItem('ll_session_v4');
+          return saved ? JSON.parse(saved)?.session_token : null;
+        } catch (e) { return null; }
+      })();
+
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`/api/user/search?q=${encodeURIComponent(cleanQ)}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const results = data.users || data.results || data.directory || [];
+        if (Array.isArray(results) && results.length > 0) {
+          // Merge newly discovered users into allUsers state for UI consistency
+          setAllUsers(prev => {
+            const next = { ...prev };
+            results.forEach(u => { if (u && u.username) next[u.username] = u; });
+            return next;
+          });
+          return results;
+        }
+      }
+    } catch (err) {
+      console.warn("Backend user search query failed, checking directory cache", err);
+    }
+
+    // 2. Fallback to in-memory global directory cache
+    return Object.values(allUsers || {}).filter(u =>
       (u.username && u.username.toLowerCase().includes(q)) || 
       (u.nodeId && u.nodeId.toLowerCase().includes(q)) || 
       (u.email && u.email.toLowerCase().includes(q))
